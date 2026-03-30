@@ -1,0 +1,38 @@
+from typing import Literal
+from pydantic import BaseModel
+
+
+class ProviderConfig(BaseModel):
+    provider: Literal["openai", "anthropic", "ollama", "custom"]
+    api_key: str = ""
+    base_url: str = ""
+    model: str
+
+
+class DoubtRequest(BaseModel):
+    subject_id: int
+    question: str
+    provider_config: ProviderConfig
+
+
+class ExplainRequest(BaseModel):
+    subject_id: int
+    topic: str
+    learning_style: str
+    provider_config: ProviderConfig
+
+
+class TriviaRequest(BaseModel):
+    subject_id: int
+    provider_config: ProviderConfig
+
+
+class TriviaQuestion(BaseModel):
+    question: str
+    options: list[str]
+    answer: str
+    explanation: str
+
+
+class TriviaResponse(BaseModel):
+    questions: list[TriviaQuestion]

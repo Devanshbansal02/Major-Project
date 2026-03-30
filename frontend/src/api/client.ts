@@ -14,10 +14,12 @@ export async function getNotes(subjectId?: number): Promise<Note[]> {
 export async function getModels(
   provider: string,
   apiKey: string,
-  baseUrl?: string
+  baseUrl?: string,
+  customStyle?: string
 ): Promise<string[]> {
   const params = new URLSearchParams({ provider, api_key: apiKey });
   if (baseUrl) params.set("base_url", baseUrl);
+  if (customStyle) params.set("custom_style", customStyle);
   const res = await fetch(`${BASE_URL}/api/providers/models?${params}`);
   if (!res.ok) return [];
   return res.json();
@@ -37,6 +39,7 @@ export async function getTriviaQuestions(
         api_key: providerConfig.apiKey,
         base_url: providerConfig.baseUrl,
         model: providerConfig.model,
+        custom_style: providerConfig.customStyle,
       },
     }),
   });

@@ -7,6 +7,7 @@ class ProviderConfig(BaseModel):
     api_key: str = ""
     base_url: str = ""
     model: str
+    custom_style: Literal["openai", "anthropic"] = "openai"
 
 
 class DoubtRequest(BaseModel):

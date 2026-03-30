@@ -6,7 +6,7 @@ router = APIRouter()
 
 
 @router.get("/providers/models")
-async def get_models(provider: str, api_key: str = "", base_url: str = ""):
+async def get_models(provider: str, api_key: str = "", base_url: str = "", custom_style: str = "openai"):
     if provider == "anthropic":
         return ANTHROPIC_MODELS
 
@@ -39,6 +39,9 @@ async def get_models(provider: str, api_key: str = "", base_url: str = ""):
             return []
 
     if provider == "custom":
+        # If the custom endpoint speaks the Anthropic API, return the hardcoded list
+        if custom_style == "anthropic":
+            return ANTHROPIC_MODELS
         try:
             async with httpx.AsyncClient(timeout=10) as client:
                 r = await client.get(

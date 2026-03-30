@@ -16,9 +16,10 @@ async def fetch_notes(subject_id: Optional[int] = None) -> list[dict]:
             r.raise_for_status()
             raw = r.json()
 
-        # API returns a list of note objects
+        # API returns {"notes": [...]}
+        items = raw.get("notes", []) if isinstance(raw, dict) else raw
         notes = []
-        for item in raw:
+        for item in items:
             try:
                 note = Note(
                     notes_id=item["notes_id"],

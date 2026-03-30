@@ -19,6 +19,42 @@ async def get_completion(
 
     # --- OpenAI-compatible providers ---
     if provider in ("openai", "ollama", "custom"):
+        use_anthropic_style = provider == "custom" and provider_config.custom_style == "anthropic"
+
+        if use_anthropic_style:
+            # Custom provider that speaks the Anthropic API
+            client = _anthropic.AsyncAnthropic(api_key=api_key, base_url=provider_config.base_url or None)
+            system = ""
+            anthro_messages = []
+            for m in messages:
+                if m["role"] == "system":
+                    system = m["content"]
+                else:
+                    anthro_messages.append({"role": m["role"], "content": m["content"]})
+
+            if stream:
+                async def _stream_custom_anthropic():
+                    async with client.messages.stream(
+                        model=model,
+                        max_tokens=2048,
+                        system=system,
+                        messages=anthro_messages,
+                    ) as s:
+                        async for text in s.text_stream:
+                            yield text
+                return _stream_custom_anthropic()
+            else:
+                async def _complete_custom_anthropic():
+                    resp = await client.messages.create(
+                        model=model,
+                        max_tokens=2048,
+                        system=system,
+                        messages=anthro_messages,
+                    )
+                    yield resp.content[0].text
+                return _complete_custom_anthropic()
+
+        # OpenAI-compatible path
         if provider == "openai":
             base_url = "https://api.openai.com/v1"
         elif provider == "ollama":

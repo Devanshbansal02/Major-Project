@@ -9,8 +9,10 @@ interface Props {
 }
 
 export default function ProviderSelector({ onTestResult }: Props) {
-  const { provider, apiKey, baseUrl, model, setProvider, setApiKey, setBaseUrl, setModel } =
-    useSettingsStore();
+  const {
+    provider, apiKey, baseUrl, model, customStyle,
+    setProvider, setApiKey, setBaseUrl, setModel, setCustomStyle,
+  } = useSettingsStore();
 
   const [models, setModels] = useState<string[]>([]);
   const [loadingModels, setLoadingModels] = useState(false);
@@ -21,7 +23,12 @@ export default function ProviderSelector({ onTestResult }: Props) {
     async function load() {
       setLoadingModels(true);
       try {
-        const list = await getModels(provider, apiKey, baseUrl || undefined);
+        const list = await getModels(
+          provider,
+          apiKey,
+          provider === "custom" ? baseUrl : undefined,
+          provider === "custom" ? customStyle : undefined,
+        );
         if (!cancelled) {
           setModels(list);
           if (list.length > 0 && !list.includes(model)) setModel(list[0]);
@@ -34,21 +41,19 @@ export default function ProviderSelector({ onTestResult }: Props) {
     }
     load();
     return () => { cancelled = true; };
-  }, [provider, apiKey, baseUrl]);
+  }, [provider, apiKey, baseUrl, customStyle]);
 
   async function handleTest() {
     setTestStatus("testing");
     try {
-      const res = await fetch("http://localhost:8000/api/chat/doubt", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          subject_id: 32,
-          question: "ping",
-          provider_config: { provider, api_key: apiKey, base_url: baseUrl, model },
-        }),
-      });
-      const ok = res.status < 500;
+      // Validate by fetching the model list — lightweight and doesn't need RAG
+      const list = await getModels(
+        provider,
+        apiKey,
+        provider === "custom" ? baseUrl : undefined,
+        provider === "custom" ? customStyle : undefined,
+      );
+      const ok = list.length > 0;
       setTestStatus(ok ? "ok" : "err");
       onTestResult?.(ok);
     } catch {
@@ -80,10 +85,31 @@ export default function ProviderSelector({ onTestResult }: Props) {
       )}
 
       {provider === "custom" && (
-        <div className="field">
-          <label>Base URL</label>
-          <input type="text" value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} placeholder="https://your-api.com/v1" style={{ width: "100%" }} />
-        </div>
+        <>
+          <div className="field">
+            <label>Base URL</label>
+            <input type="text" value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} placeholder="https://your-api.com/v1" style={{ width: "100%" }} />
+          </div>
+
+          <div className="field">
+            <label>Endpoint Style</label>
+            <p className="field-hint">Does your custom provider use the OpenAI API format or the Anthropic API format?</p>
+            <div className="radio-group">
+              {(["openai", "anthropic"] as const).map((style) => (
+                <label key={style} className={`radio-opt ${customStyle === style ? "active" : ""}`}>
+                  <input
+                    type="radio"
+                    name="custom_style"
+                    value={style}
+                    checked={customStyle === style}
+                    onChange={() => setCustomStyle(style)}
+                  />
+                  {style === "openai" ? "OpenAI-compatible" : "Anthropic-compatible"}
+                </label>
+              ))}
+            </div>
+          </div>
+        </>
       )}
 
       <div className="field">
@@ -107,6 +133,7 @@ export default function ProviderSelector({ onTestResult }: Props) {
         .provider-sel { display: flex; flex-direction: column; gap: 18px; }
         .field { display: flex; flex-direction: column; gap: 6px; }
         .field > label { font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.06em; }
+        .field-hint { font-size: 12px; color: var(--text-muted); margin: 0 0 4px; }
         .radio-group { display: flex; gap: 8px; flex-wrap: wrap; }
         .radio-opt {
           display: flex; align-items: center; gap: 6px;

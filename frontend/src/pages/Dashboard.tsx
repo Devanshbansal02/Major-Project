@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import SubjectCard from "../components/SubjectCard";
 import { SUBJECTS } from "../constants/subjects";
 import { getNotes } from "../api/client";
+import { useSettingsStore } from "../store/settings";
 import type { Subject } from "../types";
 
 export default function Dashboard() {
@@ -10,6 +11,20 @@ export default function Dashboard() {
   const [subjects, setSubjects] = useState<Subject[]>(
     SUBJECTS.map((s) => ({ ...s, noteCount: 0 }))
   );
+  const [showToast, setShowToast] = useState(false);
+
+  const { provider, apiKey, model } = useSettingsStore();
+
+  // Show toast if provider needs config and hasn't been set up
+  useEffect(() => {
+    const needsKey = provider !== "ollama";
+    const configured = !needsKey || (apiKey.trim() !== "" && model.trim() !== "");
+    if (!configured) {
+      setShowToast(true);
+      const timer = setTimeout(() => setShowToast(false), 6000);
+      return () => clearTimeout(timer);
+    }
+  }, [provider, apiKey, model]);
 
   useEffect(() => {
     getNotes()
@@ -43,6 +58,14 @@ export default function Dashboard() {
         {subjects.map((subject) => (
           <SubjectCard key={subject.id} subject={subject} />
         ))}
+      </div>
+
+      {/* Toast: unconfigured provider */}
+      <div className={`toast ${showToast ? "toast-visible" : ""}`}>
+        <span>⚙️ LLM provider not configured.</span>
+        <button className="toast-link" onClick={() => { setShowToast(false); navigate("/settings"); }}>
+          Go to Settings →
+        </button>
       </div>
 
       <style>{`
@@ -88,6 +111,43 @@ export default function Dashboard() {
         }
         @media (max-width: 800px) {
           .subject-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+        .toast {
+          position: fixed;
+          bottom: 28px;
+          left: 50%;
+          transform: translateX(-50%) translateY(80px);
+          background: var(--bg-elevated);
+          border: 1px solid var(--accent);
+          border-radius: var(--radius-md);
+          padding: 12px 20px;
+          display: flex;
+          align-items: center;
+          gap: 14px;
+          font-size: 13px;
+          color: var(--text-primary);
+          box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+          opacity: 0;
+          transition: transform 350ms cubic-bezier(0.22,1,0.36,1), opacity 350ms ease;
+          pointer-events: none;
+          z-index: 100;
+          white-space: nowrap;
+        }
+        .toast.toast-visible {
+          opacity: 1;
+          transform: translateX(-50%) translateY(0);
+          pointer-events: auto;
+        }
+        .toast-link {
+          background: none;
+          border: none;
+          color: var(--accent-hover);
+          font-weight: 600;
+          font-size: 13px;
+          cursor: pointer;
+          padding: 0;
+          text-decoration: underline;
+          text-underline-offset: 2px;
         }
       `}</style>
     </div>

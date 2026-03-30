@@ -18,6 +18,7 @@ export interface ProviderConfig {
   apiKey: string;
   baseUrl: string;
   model: string;
+  customStyle: "openai" | "anthropic";
 }
 
 export interface TriviaQuestion {

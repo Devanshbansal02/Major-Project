@@ -10,11 +10,13 @@ interface SettingsStore {
   apiKey: string;
   baseUrl: string;
   model: string;
+  customStyle: ProviderConfig["customStyle"];
   learningStyle: string;
   setProvider: (p: ProviderConfig["provider"]) => void;
   setApiKey: (k: string) => void;
   setModel: (m: string) => void;
   setBaseUrl: (u: string) => void;
+  setCustomStyle: (s: ProviderConfig["customStyle"]) => void;
   setLearningStyle: (s: string) => void;
   resetLearningStyle: () => void;
 }
@@ -26,11 +28,13 @@ export const useSettingsStore = create<SettingsStore>()(
       apiKey: "",
       baseUrl: "",
       model: "",
+      customStyle: "openai" as ProviderConfig["customStyle"],
       learningStyle: DEFAULT_LEARNING_STYLE,
       setProvider: (p) => set({ provider: p }),
       setApiKey: (k) => set({ apiKey: k }),
       setModel: (m) => set({ model: m }),
       setBaseUrl: (u) => set({ baseUrl: u }),
+      setCustomStyle: (s) => set({ customStyle: s }),
       setLearningStyle: (s) => set({ learningStyle: s }),
       resetLearningStyle: () => set({ learningStyle: DEFAULT_LEARNING_STYLE }),
     }),

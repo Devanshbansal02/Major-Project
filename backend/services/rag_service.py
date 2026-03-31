@@ -26,7 +26,7 @@ def _run_subprocess(cmd: list[str]) -> tuple[str, str, int]:
         )
         return result.stdout.strip(), result.stderr.strip(), result.returncode
     except FileNotFoundError:
-        return "", f"Executable not found: {cmd[0]!r}. Is notebooklm-py installed and on PATH?", -1
+        return "", f"Executable not found: {cmd[0]!r}. Is uv installed and on PATH?", -1
 
 
 async def build_index() -> None:
@@ -39,17 +39,17 @@ async def build_index() -> None:
         return
 
     logger.info("Building RAG index: input=%s output=%s", subjects_path, index_path)
-    cmd = ["notebooklm-py", "index", "--input", str(subjects_path), "--output", str(index_path)]
+    cmd = ["uv", "run", "notebooklm", "index", "--input", str(subjects_path), "--output", str(index_path)]
     stdout, stderr, rc = await asyncio.to_thread(_run_subprocess, cmd)
 
     if rc == -1:
         logger.error("build_index: %s", stderr)
     elif rc != 0:
-        logger.error("notebooklm-py index failed (rc=%d): %s", rc, stderr)
+        logger.error("notebooklm index failed (rc=%d): %s", rc, stderr)
     else:
         logger.info("RAG index built successfully")
         if stderr:
-            logger.debug("notebooklm-py index stderr: %s", stderr)
+            logger.debug("notebooklm index stderr: %s", stderr)
 
 
 async def query(subject_id: int, question: str, top_k: int = 5) -> list[str]:
@@ -62,7 +62,7 @@ async def query(subject_id: int, question: str, top_k: int = 5) -> list[str]:
 
     logger.debug("RAG query: subject_id=%d top_k=%d question=%r", subject_id, top_k, question[:80])
     cmd = [
-        "notebooklm-py", "query",
+        "uv", "run", "notebooklm", "query",
         "--index", str(index_path),
         "--subject", str(subject_id),
         "--query", question,
@@ -75,7 +75,7 @@ async def query(subject_id: int, question: str, top_k: int = 5) -> list[str]:
         return []
 
     if rc != 0:
-        logger.error("notebooklm-py query failed (rc=%d): %s", rc, stderr)
+        logger.error("notebooklm query failed (rc=%d): %s", rc, stderr)
         return []
 
     if not stdout:

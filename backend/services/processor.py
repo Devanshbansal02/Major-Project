@@ -6,7 +6,7 @@ from pptx import Presentation
 from pdf2image import convert_from_path
 import httpx
 
-from backend.config import RAW_DIR, PROCESSED_DIR, SUBJECTS_DIR, SUBJECT_IDS, SUBJECTS
+from backend.config import RAW_DIR, PROCESSED_DIR, SUBJECTS_DIR, SUBJECTS
 from backend.services import notes_service, rag_service
 
 logger = logging.getLogger(__name__)
@@ -27,7 +27,7 @@ def _pptx_to_text(path: Path) -> str:
 
 def _pdf_typed_to_text(path: Path, out_path: Path) -> str:
     result = subprocess.run(
-        ["opendataloader-pdf", str(path), "--output", str(out_path)],
+        ["uv", "run", "opendataloader-pdf", str(path), "--output", str(out_path)],
         capture_output=True, text=True
     )
     if out_path.exists():
@@ -42,7 +42,7 @@ def _pdf_handwritten_to_text(path: Path) -> str:
         img_path = path.parent / f"{path.stem}_page_{i+1}.png"
         page.save(str(img_path), "PNG")
         result = subprocess.run(
-            ["tesseract", str(img_path), "stdout"],
+            ["uv", "run", "tesseract", str(img_path), "stdout"],
             capture_output=True, text=True
         )
         text_parts.append(result.stdout)

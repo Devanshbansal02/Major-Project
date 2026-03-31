@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import subprocess
 from pathlib import Path
 from pptx import Presentation
@@ -7,6 +8,8 @@ import httpx
 
 from backend.config import RAW_DIR, PROCESSED_DIR, SUBJECTS_DIR, SUBJECT_IDS, SUBJECTS
 from backend.services import notes_service, rag_service
+
+logger = logging.getLogger(__name__)
 
 
 def _pptx_to_text(path: Path) -> str:
@@ -72,7 +75,7 @@ async def process_note(note: dict) -> Path | None:
     try:
         await _download(link, raw_path)
     except Exception as e:
-        print(f"[processor] Download failed for {notes_id}: {e}")
+        logger.error("Download failed for notes_id=%s: %s", notes_id, e)
         return None
 
     # Extract text
@@ -89,7 +92,7 @@ async def process_note(note: dict) -> Path | None:
         if not out_path.exists():
             out_path.write_text(text, encoding="utf-8")
     except Exception as e:
-        print(f"[processor] Processing failed for {notes_id}: {e}")
+        logger.error("Processing failed for notes_id=%s: %s", notes_id, e, exc_info=True)
         return None
 
     return out_path

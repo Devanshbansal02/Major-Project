@@ -1,7 +1,10 @@
+import logging
 from typing import AsyncGenerator
 from openai import AsyncOpenAI
 import anthropic as _anthropic
 from backend.models.chat import ProviderConfig
+
+logger = logging.getLogger(__name__)
 
 
 async def get_completion(
@@ -17,111 +20,115 @@ async def get_completion(
     api_key = provider_config.api_key
     model = provider_config.model
 
-    # --- OpenAI-compatible providers ---
-    if provider in ("openai", "ollama", "custom"):
-        use_anthropic_style = provider == "custom" and provider_config.custom_style == "anthropic"
-
-        if use_anthropic_style:
-            # Custom provider that speaks the Anthropic API
-            client = _anthropic.AsyncAnthropic(api_key=api_key, base_url=provider_config.base_url or None)
-            system = ""
-            anthro_messages = []
-            for m in messages:
-                if m["role"] == "system":
-                    system = m["content"]
-                else:
-                    anthro_messages.append({"role": m["role"], "content": m["content"]})
-
-            if stream:
-                async def _stream_custom_anthropic():
-                    async with client.messages.stream(
-                        model=model,
-                        max_tokens=2048,
-                        system=system,
-                        messages=anthro_messages,
-                    ) as s:
-                        async for text in s.text_stream:
-                            yield text
-                return _stream_custom_anthropic()
-            else:
-                async def _complete_custom_anthropic():
-                    resp = await client.messages.create(
-                        model=model,
-                        max_tokens=2048,
-                        system=system,
-                        messages=anthro_messages,
-                    )
-                    yield resp.content[0].text
-                return _complete_custom_anthropic()
-
-        # OpenAI-compatible path
-        if provider == "openai":
-            base_url = "https://api.openai.com/v1"
-        elif provider == "ollama":
-            base_url = "http://localhost:11434/v1"
-            api_key = api_key or "ollama"
-        else:
-            base_url = provider_config.base_url
-
-        client = AsyncOpenAI(api_key=api_key or "none", base_url=base_url)
-
-        if stream:
-            async def _stream_openai():
-                async with client.chat.completions.stream(
-                    model=model,
-                    messages=messages,
-                ) as s:
-                    async for chunk in s:
-                        delta = chunk.choices[0].delta.content if chunk.choices else None
-                        if delta:
-                            yield delta
-            return _stream_openai()
-        else:
-            async def _complete_openai():
-                resp = await client.chat.completions.create(
-                    model=model,
-                    messages=messages,
-                    stream=False,
-                )
-                yield resp.choices[0].message.content or ""
-            return _complete_openai()
+    logger.info(
+        "LLM completion: provider=%s model=%s stream=%s messages=%d",
+        provider, model, stream, len(messages),
+    )
 
     # --- Anthropic ---
-    elif provider == "anthropic":
+    if provider == "anthropic":
+        logger.debug("Using Anthropic SDK")
         client = _anthropic.AsyncAnthropic(api_key=api_key)
+        return _anthropic_gen(client, model, messages, stream)
 
-        # Separate system prompt from user messages
-        system = ""
-        anthro_messages = []
-        for m in messages:
-            if m["role"] == "system":
-                system = m["content"]
-            else:
-                anthro_messages.append({"role": m["role"], "content": m["content"]})
+    # --- Custom provider with Anthropic-style API ---
+    if provider == "custom" and provider_config.custom_style == "anthropic":
+        logger.debug("Using Anthropic SDK for custom Anthropic-compatible endpoint: %s", provider_config.base_url)
+        client = _anthropic.AsyncAnthropic(
+            api_key=api_key,
+            base_url=provider_config.base_url or None,
+        )
+        return _anthropic_gen(client, model, messages, stream)
 
-        if stream:
-            async def _stream_anthropic():
-                async with client.messages.stream(
-                    model=model,
-                    max_tokens=2048,
-                    system=system,
-                    messages=anthro_messages,
-                ) as s:
-                    async for text in s.text_stream:
-                        yield text
-            return _stream_anthropic()
-        else:
-            async def _complete_anthropic():
-                resp = await client.messages.create(
-                    model=model,
-                    max_tokens=2048,
-                    system=system,
-                    messages=anthro_messages,
-                )
-                yield resp.content[0].text
-            return _complete_anthropic()
-
+    # --- OpenAI-compatible providers (openai, ollama, custom/openai) ---
+    if provider == "openai":
+        base_url = "https://api.openai.com/v1"
+    elif provider == "ollama":
+        base_url = "http://localhost:11434/v1"
+        api_key = api_key or "ollama"
     else:
-        async def _unsupported():
-            yield f"Unsupported provider: {provider}"
-        return _unsupported()
+        # custom with openai style
+        base_url = provider_config.base_url
+
+    logger.debug("Using OpenAI-compatible SDK: base_url=%s", base_url)
+    client = AsyncOpenAI(api_key=api_key or "none", base_url=base_url)
+    return _openai_gen(client, model, messages, stream)
+
+
+async def _anthropic_gen(
+    client: _anthropic.AsyncAnthropic,
+    model: str,
+    messages: list[dict],
+    stream: bool,
+) -> AsyncGenerator[str, None]:
+    """Separate system prompt from user/assistant turns, then call Anthropic."""
+    system = ""
+    anthro_messages = []
+    for m in messages:
+        if m["role"] == "system":
+            system = m["content"]
+        else:
+            anthro_messages.append({"role": m["role"], "content": m["content"]})
+
+    if stream:
+        logger.debug("Anthropic: streaming response")
+        try:
+            async with client.messages.stream(
+                model=model,
+                max_tokens=2048,
+                system=system,
+                messages=anthro_messages,
+            ) as s:
+                async for text in s.text_stream:
+                    yield text
+        except Exception as e:
+            logger.error("Anthropic streaming error: %s", e, exc_info=True)
+            yield f"\n\n[Error: {e}]"
+    else:
+        logger.debug("Anthropic: non-streaming response")
+        try:
+            resp = await client.messages.create(
+                model=model,
+                max_tokens=2048,
+                system=system,
+                messages=anthro_messages,
+            )
+            yield resp.content[0].text
+        except Exception as e:
+            logger.error("Anthropic completion error: %s", e, exc_info=True)
+            yield f"[Error: {e}]"
+
+
+async def _openai_gen(
+    client: AsyncOpenAI,
+    model: str,
+    messages: list[dict],
+    stream: bool,
+) -> AsyncGenerator[str, None]:
+    """Call OpenAI-compatible API."""
+    if stream:
+        logger.debug("OpenAI-compat: streaming response")
+        try:
+            async with client.chat.completions.stream(
+                model=model,
+                messages=messages,
+            ) as s:
+                async for chunk in s:
+                    delta = chunk.choices[0].delta.content if chunk.choices else None
+                    if delta:
+                        yield delta
+        except Exception as e:
+            logger.error("OpenAI streaming error: %s", e, exc_info=True)
+            yield f"\n\n[Error: {e}]"
+    else:
+        logger.debug("OpenAI-compat: non-streaming response")
+        try:
+            resp = await client.chat.completions.create(
+                model=model,
+                messages=messages,
+                stream=False,
+            )
+            yield resp.choices[0].message.content or ""
+        except Exception as e:
+            logger.error("OpenAI completion error: %s", e, exc_info=True)
+            yield f"[Error: {e}]"

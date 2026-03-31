@@ -10,9 +10,12 @@ interface Props {
 
 export default function ProviderSelector({ onTestResult }: Props) {
   const {
-    provider, apiKey, baseUrl, model, customStyle,
-    setProvider, setApiKey, setBaseUrl, setModel, setCustomStyle,
+    provider, apiKeys, baseUrl, model, customStyle,
+    setProvider, setApiKey, setBaseUrl, setModel, setCustomStyle, getApiKey,
   } = useSettingsStore();
+
+  // Current provider's key, derived from per-provider map
+  const apiKey = getApiKey();
 
   const [models, setModels] = useState<string[]>([]);
   const [loadingModels, setLoadingModels] = useState(false);
@@ -41,12 +44,12 @@ export default function ProviderSelector({ onTestResult }: Props) {
     }
     load();
     return () => { cancelled = true; };
-  }, [provider, apiKey, baseUrl, customStyle]);
+    // Re-run when provider changes, or the current provider's key/baseUrl/customStyle changes
+  }, [provider, apiKey, baseUrl, customStyle]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleTest() {
     setTestStatus("testing");
     try {
-      // Validate by fetching the model list — lightweight and doesn't need RAG
       const list = await getModels(
         provider,
         apiKey,
@@ -80,7 +83,14 @@ export default function ProviderSelector({ onTestResult }: Props) {
       {provider !== "ollama" && (
         <div className="field">
           <label>API Key</label>
-          <input type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder="sk-..." style={{ width: "100%" }} />
+          {/* Each provider shows its own persisted key independently */}
+          <input
+            type="password"
+            value={apiKeys[provider] ?? ""}
+            onChange={(e) => setApiKey(e.target.value)}
+            placeholder="sk-..."
+            style={{ width: "100%" }}
+          />
         </div>
       )}
 

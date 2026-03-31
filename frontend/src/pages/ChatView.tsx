@@ -16,7 +16,7 @@ export default function ChatView() {
   const topicParam = searchParams.get("topic") ?? "";
 
   const subject = SUBJECTS.find((s) => s.id === subjectId);
-  const { provider, apiKey, baseUrl, model, learningStyle, customStyle } = useSettingsStore();
+  const { provider, baseUrl, model, learningStyle, customStyle, getApiKey } = useSettingsStore();
 
   const [messages, setMessages] = useState<ChatMessageType[]>([]);
   const [input, setInput] = useState("");
@@ -30,7 +30,7 @@ export default function ChatView() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, streamingContent]);
 
-  const providerConfig = { provider, api_key: apiKey, base_url: baseUrl, model, custom_style: customStyle };
+  const providerConfig = { provider, api_key: getApiKey(), base_url: baseUrl, model, custom_style: customStyle };
 
   async function send(text: string) {
     if (!text.trim() || streaming) return;

@@ -1,13 +1,18 @@
+import logging
 from fastapi import APIRouter
 from backend.config import ANTHROPIC_MODELS
 import httpx
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 @router.get("/providers/models")
 async def get_models(provider: str, api_key: str = "", base_url: str = "", custom_style: str = "openai"):
+    logger.info("Model listing requested: provider=%s", provider)
+
     if provider == "anthropic":
+        logger.debug("Returning hardcoded Anthropic model list (%d models)", len(ANTHROPIC_MODELS))
         return ANTHROPIC_MODELS
 
     if provider == "ollama":
@@ -16,8 +21,11 @@ async def get_models(provider: str, api_key: str = "", base_url: str = "", custo
                 r = await client.get("http://localhost:11434/api/tags")
                 r.raise_for_status()
                 data = r.json()
-                return [m["name"] for m in data.get("models", [])]
-        except Exception:
+                models = [m["name"] for m in data.get("models", [])]
+                logger.debug("Ollama models fetched: %s", models)
+                return models
+        except Exception as e:
+            logger.warning("Failed to fetch Ollama models: %s", e)
             return []
 
     if provider == "openai":
@@ -29,29 +37,38 @@ async def get_models(provider: str, api_key: str = "", base_url: str = "", custo
                 )
                 r.raise_for_status()
                 models = r.json().get("data", [])
-                # Filter to GPT models only, sorted
                 ids = sorted(
                     [m["id"] for m in models if "gpt" in m["id"].lower()],
                     reverse=True,
                 )
+                logger.debug("OpenAI models fetched: %d GPT models", len(ids))
                 return ids
-        except Exception:
+        except Exception as e:
+            logger.warning("Failed to fetch OpenAI models: %s", e)
             return []
 
     if provider == "custom":
-        # If the custom endpoint speaks the Anthropic API, return the hardcoded list
+        # Anthropic-style custom endpoint → return curated list (Anthropic has no list API)
         if custom_style == "anthropic":
+            logger.debug("Custom Anthropic-style endpoint: returning hardcoded model list")
             return ANTHROPIC_MODELS
+        # OpenAI-style custom endpoint → fetch from /models
         try:
             async with httpx.AsyncClient(timeout=10) as client:
+                url = f"{base_url.rstrip('/')}/models"
+                logger.debug("Fetching custom models from: %s", url)
                 r = await client.get(
-                    f"{base_url.rstrip('/')}/models",
+                    url,
                     headers={"Authorization": f"Bearer {api_key}"},
                 )
                 r.raise_for_status()
                 models = r.json().get("data", [])
-                return [m["id"] for m in models]
-        except Exception:
+                ids = [m["id"] for m in models]
+                logger.debug("Custom models fetched: %s", ids)
+                return ids
+        except Exception as e:
+            logger.warning("Failed to fetch custom provider models: %s", e)
             return []
 
+    logger.warning("Unknown provider: %s", provider)
     return []

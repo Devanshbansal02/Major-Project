@@ -13,18 +13,19 @@ export default function Dashboard() {
   );
   const [showToast, setShowToast] = useState(false);
 
-  const { provider, apiKey, model } = useSettingsStore();
+  const { provider, model, getApiKey } = useSettingsStore();
 
   // Show toast if provider needs config and hasn't been set up
   useEffect(() => {
     const needsKey = provider !== "ollama";
+    const apiKey = getApiKey();
     const configured = !needsKey || (apiKey.trim() !== "" && model.trim() !== "");
     if (!configured) {
       setShowToast(true);
       const timer = setTimeout(() => setShowToast(false), 6000);
       return () => clearTimeout(timer);
     }
-  }, [provider, apiKey, model]);
+  }, [provider, model, getApiKey]);
 
   useEffect(() => {
     getNotes()

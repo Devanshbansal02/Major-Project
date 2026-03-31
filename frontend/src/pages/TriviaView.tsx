@@ -12,7 +12,7 @@ export default function TriviaView() {
   const subjectId = Number(id);
   const subject = SUBJECTS.find((s) => s.id === subjectId);
 
-  const { provider, apiKey, baseUrl, model, customStyle } = useSettingsStore();
+  const { provider, baseUrl, model, customStyle, getApiKey } = useSettingsStore();
   const [questions, setQuestions] = useState<TriviaQuestionType[]>([]);
   const [current, setCurrent] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -24,7 +24,7 @@ export default function TriviaView() {
     setCurrent(0);
     setQuestions([]);
     try {
-      const providerConfig = { provider, apiKey, baseUrl, model, customStyle };
+      const providerConfig = { provider, apiKey: getApiKey(), baseUrl, model, customStyle };
       const qs = await getTriviaQuestions(subjectId, providerConfig);
       if (qs.length === 0) throw new Error("No questions returned");
       setQuestions(qs);

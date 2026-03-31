@@ -1,18 +1,29 @@
+import logging
 import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from backend.logging_config import setup_logging
 from backend.routers import notes, chat, providers
 from backend.config import DATA_DIR, RAW_DIR, PROCESSED_DIR, SUBJECTS_DIR, INDEX_DIR
+
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    setup_logging()
+    logger.info("Bloom API starting up")
+
     # Create data directories on startup
     for d in [DATA_DIR, RAW_DIR, PROCESSED_DIR, SUBJECTS_DIR, INDEX_DIR]:
         os.makedirs(d, exist_ok=True)
+        logger.debug("Ensured directory: %s", d)
+
+    logger.info("Bloom API ready")
     yield
+    logger.info("Bloom API shutting down")
 
 
 app = FastAPI(title="Bloom API", lifespan=lifespan)

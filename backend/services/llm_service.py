@@ -62,23 +62,23 @@ async def _anthropic_gen(
     stream: bool,
 ) -> AsyncGenerator[str, None]:
     """Separate system prompt from user/assistant turns, then call Anthropic."""
-    system = ""
+    system: str | _anthropic.NotGiven = _anthropic.NOT_GIVEN
     anthro_messages = []
     for m in messages:
         if m["role"] == "system":
-            system = m["content"]
+            if m["content"].strip():
+                system = m["content"]
         else:
             anthro_messages.append({"role": m["role"], "content": m["content"]})
+
+    kwargs: dict = dict(model=model, max_tokens=2048, messages=anthro_messages)
+    if system is not _anthropic.NOT_GIVEN:
+        kwargs["system"] = system
 
     if stream:
         logger.debug("Anthropic: streaming response")
         try:
-            async with client.messages.stream(
-                model=model,
-                max_tokens=2048,
-                system=system,
-                messages=anthro_messages,
-            ) as s:
+            async with client.messages.stream(**kwargs) as s:
                 async for text in s.text_stream:
                     yield text
         except Exception as e:
@@ -87,12 +87,7 @@ async def _anthropic_gen(
     else:
         logger.debug("Anthropic: non-streaming response")
         try:
-            resp = await client.messages.create(
-                model=model,
-                max_tokens=2048,
-                system=system,
-                messages=anthro_messages,
-            )
+            resp = await client.messages.create(**kwargs)
             yield resp.content[0].text
         except Exception as e:
             logger.error("Anthropic completion error: %s", e, exc_info=True)
@@ -109,12 +104,14 @@ async def _openai_gen(
     if stream:
         logger.debug("OpenAI-compat: streaming response")
         try:
-            async with client.chat.completions.stream(
+            response = await client.chat.completions.create(
                 model=model,
                 messages=messages,
-            ) as s:
-                async for chunk in s:
-                    delta = chunk.choices[0].delta.content if chunk.choices else None
+                stream=True,
+            )
+            async for chunk in response:
+                if chunk.choices:
+                    delta = chunk.choices[0].delta.content
                     if delta:
                         yield delta
         except Exception as e:

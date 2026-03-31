@@ -48,15 +48,20 @@ async def get_models(provider: str, api_key: str = "", base_url: str = "", custo
             return []
 
     if provider == "custom":
-        # Anthropic-style custom endpoint → return curated list (Anthropic has no list API)
+        # Anthropic-style custom endpoint → return curated list (Anthropic has no public list API)
         if custom_style == "anthropic":
             logger.debug("Custom Anthropic-style endpoint: returning hardcoded model list")
             return ANTHROPIC_MODELS
-        # OpenAI-style custom endpoint → fetch from /models
+        # OpenAI-style custom endpoint → fetch from /v1/models (or /models if base_url already has v1)
         try:
+            stripped = base_url.rstrip("/")
+            # If the base URL already contains a version segment, go straight to /models
+            if "/v1" in stripped or "/v2" in stripped:
+                url = f"{stripped}/models"
+            else:
+                url = f"{stripped}/v1/models"
+            logger.debug("Fetching custom models from: %s", url)
             async with httpx.AsyncClient(timeout=10) as client:
-                url = f"{base_url.rstrip('/')}/models"
-                logger.debug("Fetching custom models from: %s", url)
                 r = await client.get(
                     url,
                     headers={"Authorization": f"Bearer {api_key}"},

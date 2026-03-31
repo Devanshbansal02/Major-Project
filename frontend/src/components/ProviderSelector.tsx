@@ -86,6 +86,8 @@ export default function ProviderSelector({ onTestResult }: Props) {
           {/* Each provider shows its own persisted key independently */}
           <input
             type="password"
+            name={`bloom-api-key-${provider}`}
+            autoComplete="new-password"
             value={apiKeys[provider] ?? ""}
             onChange={(e) => setApiKey(e.target.value)}
             placeholder="sk-..."
@@ -98,7 +100,7 @@ export default function ProviderSelector({ onTestResult }: Props) {
         <>
           <div className="field">
             <label>Base URL</label>
-            <input type="text" value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} placeholder="https://your-api.com/v1" style={{ width: "100%" }} />
+            <input type="text" name="bloom-base-url" autoComplete="off" value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} placeholder="https://your-api.com/v1" style={{ width: "100%" }} />
           </div>
 
           <div className="field">

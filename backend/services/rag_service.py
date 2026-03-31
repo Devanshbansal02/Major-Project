@@ -10,16 +10,23 @@ logger = logging.getLogger(__name__)
 
 
 def _run_subprocess(cmd: list[str]) -> tuple[str, str, int]:
-    """Run a subprocess synchronously and return (stdout, stderr, returncode)."""
-    result = subprocess.run(
-        cmd,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-    )
-    return result.stdout.strip(), result.stderr.strip(), result.returncode
+    """Run a subprocess synchronously and return (stdout, stderr, returncode).
+
+    Returns (-1, error_message, -1) when the executable cannot be found so
+    callers can distinguish a missing CLI from a non-zero exit code.
+    """
+    try:
+        result = subprocess.run(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+        )
+        return result.stdout.strip(), result.stderr.strip(), result.returncode
+    except FileNotFoundError:
+        return "", f"Executable not found: {cmd[0]!r}. Is notebooklm-py installed and on PATH?", -1
 
 
 async def build_index() -> None:
@@ -35,7 +42,9 @@ async def build_index() -> None:
     cmd = ["notebooklm-py", "index", "--input", str(subjects_path), "--output", str(index_path)]
     stdout, stderr, rc = await asyncio.to_thread(_run_subprocess, cmd)
 
-    if rc != 0:
+    if rc == -1:
+        logger.error("build_index: %s", stderr)
+    elif rc != 0:
         logger.error("notebooklm-py index failed (rc=%d): %s", rc, stderr)
     else:
         logger.info("RAG index built successfully")
@@ -60,6 +69,10 @@ async def query(subject_id: int, question: str, top_k: int = 5) -> list[str]:
         "--top-k", str(top_k),
     ]
     stdout, stderr, rc = await asyncio.to_thread(_run_subprocess, cmd)
+
+    if rc == -1:
+        logger.error("RAG query: %s", stderr)
+        return []
 
     if rc != 0:
         logger.error("notebooklm-py query failed (rc=%d): %s", rc, stderr)

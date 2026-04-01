@@ -12,7 +12,23 @@ async def get_models(provider: str, api_key: str = "", base_url: str = "", custo
     logger.info("Model listing requested: provider=%s", provider)
 
     if provider == "anthropic":
-        logger.debug("Returning hardcoded Anthropic model list (%d models)", len(ANTHROPIC_MODELS))
+        try:
+            async with httpx.AsyncClient(timeout=10) as client:
+                r = await client.get(
+                    "https://api.anthropic.com/v1/models",
+                    headers={
+                        "x-api-key": api_key,
+                        "anthropic-version": "2023-06-01",
+                    },
+                )
+                r.raise_for_status()
+                models = [m["id"] for m in r.json().get("data", [])]
+                if models:
+                    logger.debug("Anthropic models fetched dynamically: %s", models)
+                    return models
+        except Exception as e:
+            logger.warning("Failed to fetch Anthropic models dynamically: %s", e)
+        logger.debug("Falling back to hardcoded Anthropic model list")
         return ANTHROPIC_MODELS
 
     if provider == "ollama":
@@ -48,19 +64,42 @@ async def get_models(provider: str, api_key: str = "", base_url: str = "", custo
             return []
 
     if provider == "custom":
-        # Anthropic-style custom endpoint → return curated list (Anthropic has no public list API)
+        # Anthropic-style custom endpoint — try dynamic fetch, fall back to hardcoded list
         if custom_style == "anthropic":
-            logger.debug("Custom Anthropic-style endpoint: returning hardcoded model list")
+            try:
+                stripped = base_url.rstrip("/")
+                # Check if base_url already contains a version prefix
+                if "/v1" in stripped or "/v2" in stripped:
+                    url = f"{stripped}/models"
+                else:
+                    url = f"{stripped}/v1/models"
+                logger.debug("Fetching custom Anthropic-style models from: %s", url)
+                async with httpx.AsyncClient(timeout=10) as client:
+                    r = await client.get(
+                        url,
+                        headers={
+                            "x-api-key": api_key,
+                            "anthropic-version": "2023-06-01",
+                        },
+                    )
+                    r.raise_for_status()
+                    models = [m["id"] for m in r.json().get("data", [])]
+                    if models:
+                        logger.debug("Custom Anthropic-style models fetched: %s", models)
+                        return models
+            except Exception as e:
+                logger.warning("Failed to fetch custom Anthropic-style models: %s", e)
+            logger.debug("Custom Anthropic-style endpoint: falling back to hardcoded model list")
             return ANTHROPIC_MODELS
+
         # OpenAI-style custom endpoint → fetch from /v1/models (or /models if base_url already has v1)
         try:
             stripped = base_url.rstrip("/")
-            # If the base URL already contains a version segment, go straight to /models
             if "/v1" in stripped or "/v2" in stripped:
                 url = f"{stripped}/models"
             else:
                 url = f"{stripped}/v1/models"
-            logger.debug("Fetching custom models from: %s", url)
+            logger.debug("Fetching custom OpenAI-style models from: %s", url)
             async with httpx.AsyncClient(timeout=10) as client:
                 r = await client.get(
                     url,

@@ -33,10 +33,14 @@ async def get_completion(
 
     # --- Custom provider with Anthropic-style API ---
     if provider == "custom" and provider_config.custom_style == "anthropic":
-        logger.debug("Using Anthropic SDK for custom Anthropic-compatible endpoint: %s", provider_config.base_url)
+        raw_url = (provider_config.base_url or "").rstrip("/")
+        # The Anthropic SDK appends /v1/... to base_url, so strip a trailing /v1 to avoid doubling
+        if raw_url.endswith("/v1"):
+            raw_url = raw_url[:-3]
+        logger.debug("Using Anthropic SDK for custom Anthropic-compatible endpoint: %s", raw_url or "(default)")
         client = _anthropic.AsyncAnthropic(
             api_key=api_key,
-            base_url=provider_config.base_url or None,
+            base_url=raw_url or None,
         )
         return _anthropic_gen(client, model, messages, stream)
 

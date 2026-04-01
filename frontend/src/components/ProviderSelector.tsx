@@ -67,7 +67,7 @@ export default function ProviderSelector({ onTestResult }: Props) {
   }
 
   return (
-    <div className="provider-sel">
+    <form className="provider-sel" autoComplete="off" onSubmit={(e) => e.preventDefault()}>
       <div className="field">
         <label>Provider</label>
         <div className="radio-group">
@@ -87,7 +87,7 @@ export default function ProviderSelector({ onTestResult }: Props) {
           <input
             type="password"
             name={`bloom-api-key-${provider}`}
-            autoComplete="new-password"
+            autoComplete="off"
             value={apiKeys[provider] ?? ""}
             onChange={(e) => setApiKey(e.target.value)}
             placeholder="sk-..."
@@ -165,6 +165,6 @@ export default function ProviderSelector({ onTestResult }: Props) {
         .test-btn.ok { background: var(--success); }
         .test-btn.err { background: var(--danger); }
       `}</style>
-    </div>
+    </form>
   );
 }

@@ -4,6 +4,8 @@ httpx
 openai
 anthropic
 python-pptx
-pdf2image
 pydantic
 sse-starlette
+pymupdf
+pytesseract
+chromadb

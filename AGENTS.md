@@ -107,6 +107,7 @@ You don't perform helpfulness — you just help. A performative assistant says "
 - Path separators are backslashes: `.\frontend\src` not `./frontend/src`.
 - For file listing use `Get-ChildItem` with appropriate flags. Do NOT use `ls` or `eza`.
 - Background processes: use `Start-Process` or `Start-Job`.
+- Docker processes: use `docker-compose up -d --build` for turning up the stack.
 - Environment variables: `$env:VAR_NAME`.
 
 ---
@@ -149,7 +150,6 @@ Invoke skills by name when the current task matches their domain. Do not invoke 
 | `rag-engineer` | RAG pipeline design — chunking, retrieval, context injection, query expansion. |
 | `rag-implementation` | Hands-on RAG implementation — vector stores, embedding pipelines, retrieval chains. |
 | `ai-engineer` | LLM integration patterns — provider clients, streaming completions, prompt construction. |
-| `notebooklm` | Guidance on working with the notebooklm-py CLI for indexing and querying. |
 | `llm-structured-output` | Getting reliable JSON from LLMs — schema enforcement, retry logic, parsing. Use for the trivia generation endpoint. |
 
 ### Frontend
@@ -186,8 +186,8 @@ The full spec is in `design.md`. Key decisions:
 - **Subjects:** 6 hardcoded subject IDs in `backend/config.py`
 - **LLM:** Provider-agnostic layer — OpenAI SDK covers OpenAI + Ollama + Custom; Anthropic SDK for Anthropic
 - **Notes source:** `https://veer-preps-api.vercel.app/api/notes/`
-- **Processing pipeline:** Tesseract CLI (handwritten), `opendataloader-pdf` CLI (typed PDF), `python-pptx` (PPTX)
-- **RAG:** `notebooklm-py` CLI for index build and querying
+- **Processing pipeline:** `pytesseract` (handwritten OCR via Docker binary), `PyMuPDF` (typed PDF), `python-pptx` (PPTX)
+- **RAG:** `ChromaDB` (embedded vector DB) + `Ollama` (`embeddinggemma:latest`) for index build and querying
 - **Features:** Ask Doubt (RAG Q&A, streamed), Explain Again (learning-style prompt, streamed), Trivia Quiz (5 MCQs, JSON)
 - **Default learning style:** Feynman + ADHD-aware chunk-by-chunk prompt (editable in Settings)
 
@@ -203,8 +203,8 @@ Follow this sequence. Do not skip ahead.
 4. SubjectView — notes list fetched from backend, PDF links working
 5. Settings page — provider config UI, model listing endpoint + dropdown
 6. LLM layer — compatibility layer working for all 4 providers
-7. Notes processing — ingestion pipeline, CLI integrations, text output
-8. RAG indexing — notebooklm-py index build wired to ingest endpoint
+7. Notes processing — selective ingestion pipeline, PyMuPDF/pytesseract integrations
+8. RAG indexing — ChromaDB index build wired to selective ingest endpoint
 9. Ask Doubt — RAG query → LLM prompt → SSE streaming → ChatView
 10. Explain Again — learning style prompt + RAG context → ChatView (explain mode)
 11. Trivia — generation prompt → JSON parse → TriviaView quiz UI

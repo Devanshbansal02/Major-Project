@@ -1,16 +1,21 @@
-import asyncio
 import logging
-import subprocess
 from pathlib import Path
-from pptx import Presentation
-from pdf2image import convert_from_path
-import httpx
 
-from backend.config import RAW_DIR, PROCESSED_DIR, SUBJECTS_DIR, SUBJECTS
-from backend.services import notes_service, rag_service
+import fitz  # PyMuPDF
+import httpx
+import pytesseract
+from PIL import Image
+from pptx import Presentation
+import io
+
+from backend.config import RAW_DIR, PROCESSED_DIR
 
 logger = logging.getLogger(__name__)
 
+
+# ---------------------------------------------------------------------------
+# Text extraction — pure library calls, no subprocess
+# ---------------------------------------------------------------------------
 
 def _pptx_to_text(path: Path) -> str:
     prs = Presentation(str(path))
@@ -25,30 +30,48 @@ def _pptx_to_text(path: Path) -> str:
     return "\n".join(lines)
 
 
-def _pdf_typed_to_text(path: Path, out_path: Path) -> str:
-    result = subprocess.run(
-        ["uv", "run", "opendataloader-pdf", str(path), "--output", str(out_path)],
-        capture_output=True, text=True
-    )
-    if out_path.exists():
-        return out_path.read_text(encoding="utf-8", errors="replace")
-    return result.stdout or ""
+def _pdf_typed_to_text(path: Path) -> str:
+    doc = fitz.open(str(path))
+    parts = []
+    for page in doc:
+        parts.append(page.get_text())
+    doc.close()
+    return "\n".join(parts)
 
 
 def _pdf_handwritten_to_text(path: Path) -> str:
-    pages = convert_from_path(str(path))
-    text_parts = []
-    for i, page in enumerate(pages):
-        img_path = path.parent / f"{path.stem}_page_{i+1}.png"
-        page.save(str(img_path), "PNG")
-        result = subprocess.run(
-            ["uv", "run", "tesseract", str(img_path), "stdout"],
-            capture_output=True, text=True
-        )
-        text_parts.append(result.stdout)
-        img_path.unlink(missing_ok=True)
-    return "\n".join(text_parts)
+    doc = fitz.open(str(path))
+    parts = []
+    for page in doc:
+        pix = page.get_pixmap(dpi=300)
+        img = Image.open(io.BytesIO(pix.tobytes("png")))
+        text = pytesseract.image_to_string(img)
+        parts.append(text)
+    doc.close()
+    return "\n".join(parts)
 
+
+# ---------------------------------------------------------------------------
+# File metadata (used by preview endpoint)
+# ---------------------------------------------------------------------------
+
+def get_file_metadata(path: Path) -> dict:
+    ext = path.suffix.lower()
+    meta = {"file_size_bytes": path.stat().st_size, "extension": ext}
+    if ext == ".pdf":
+        doc = fitz.open(str(path))
+        meta["page_count"] = len(doc)
+        meta["word_count"] = sum(len(p.get_text().split()) for p in doc)
+        doc.close()
+    elif ext == ".pptx":
+        prs = Presentation(str(path))
+        meta["slide_count"] = len(prs.slides)
+    return meta
+
+
+# ---------------------------------------------------------------------------
+# Download helper
+# ---------------------------------------------------------------------------
 
 async def _download(url: str, dest: Path) -> None:
     async with httpx.AsyncClient(timeout=60, follow_redirects=True) as client:
@@ -57,26 +80,37 @@ async def _download(url: str, dest: Path) -> None:
         dest.write_bytes(r.content)
 
 
-async def process_note(note: dict) -> Path | None:
+# ---------------------------------------------------------------------------
+# Single note processing — returns (path, text) or (None, "")
+# ---------------------------------------------------------------------------
+
+async def process_note(note: dict) -> tuple[Path | None, str]:
+    """Download and extract text from a single note.
+
+    Returns (output_path, extracted_text). If already processed, reads
+    from cache. Returns (None, "") on failure.
+    """
     notes_id = note["notes_id"]
     link: str = note["link"]
     name: str = note.get("notesname", "").lower()
 
-    # Determine extension from URL
     ext = link.rsplit(".", 1)[-1].lower() if "." in link else "bin"
 
     raw_path = Path(RAW_DIR) / f"{notes_id}.{ext}"
     out_path = Path(PROCESSED_DIR) / f"{notes_id}.txt"
 
+    # Already processed — return cached text
     if out_path.exists():
-        return out_path  # Already processed
+        text = out_path.read_text(encoding="utf-8", errors="replace")
+        return out_path, text
 
     # Download
     try:
-        await _download(link, raw_path)
+        if not raw_path.exists():
+            await _download(link, raw_path)
     except Exception as e:
         logger.error("Download failed for notes_id=%s: %s", notes_id, e)
-        return None
+        return None, ""
 
     # Extract text
     try:
@@ -85,51 +119,76 @@ async def process_note(note: dict) -> Path | None:
         elif ext == "pdf" and "handwritten" in name:
             text = _pdf_handwritten_to_text(raw_path)
         elif ext == "pdf":
-            text = _pdf_typed_to_text(raw_path, out_path)
+            text = _pdf_typed_to_text(raw_path)
         else:
             text = f"[Unsupported file type: {ext}]"
 
-        if not out_path.exists():
-            out_path.write_text(text, encoding="utf-8")
+        out_path.write_text(text, encoding="utf-8")
     except Exception as e:
         logger.error("Processing failed for notes_id=%s: %s", notes_id, e, exc_info=True)
-        return None
+        return None, ""
 
-    return out_path
+    return out_path, text
 
 
-async def ingest_all() -> dict:
+# ---------------------------------------------------------------------------
+# Preview — extract text without embedding into RAG
+# ---------------------------------------------------------------------------
+
+async def preview_note(note: dict) -> dict:
+    """Download (if needed), extract text, return preview metadata."""
+    path, text = await process_note(note)
+
+    notes_id = note["notes_id"]
+    link: str = note["link"]
+    ext = link.rsplit(".", 1)[-1].lower() if "." in link else "bin"
+    raw_path = Path(RAW_DIR) / f"{notes_id}.{ext}"
+
+    meta = {}
+    if raw_path.exists():
+        meta = get_file_metadata(raw_path)
+
+    meta["notes_id"] = notes_id
+    meta["notesname"] = note.get("notesname", "")
+    meta["text_preview"] = text[:2000] if text else ""
+    meta["word_count"] = len(text.split()) if text else 0
+    meta["is_embedded"] = False  # Will be set by the router using rag_service
+
+    return meta
+
+
+# ---------------------------------------------------------------------------
+# Bulk ingestion — selective by notes_ids
+# ---------------------------------------------------------------------------
+
+async def ingest_notes(notes: list[dict], notes_ids: list[int] | None = None) -> dict:
+    """Process selected notes and embed them into the RAG index.
+
+    Args:
+        notes: Full notes list from the API.
+        notes_ids: If provided, only process these note IDs. Otherwise process all.
+
+    Returns:
+        Summary dict with status and count.
+    """
+    from backend.services import rag_service
+
+    if notes_ids:
+        id_set = set(notes_ids)
+        notes = [n for n in notes if n["notes_id"] in id_set]
+
     # Ensure dirs exist
-    for d in [RAW_DIR, PROCESSED_DIR, SUBJECTS_DIR]:
-        Path(d).mkdir(parents=True, exist_ok=True)
+    Path(RAW_DIR).mkdir(parents=True, exist_ok=True)
+    Path(PROCESSED_DIR).mkdir(parents=True, exist_ok=True)
 
-    # Fetch all notes
-    notes = await notes_service.fetch_notes()
-
-    # Process all notes concurrently
-    tasks = [process_note(note) for note in notes]
-    results = await asyncio.gather(*tasks, return_exceptions=True)
-
-    processed_count = sum(1 for r in results if r is not None and not isinstance(r, Exception))
-
-    # Merge per subject
-    subject_map: dict[int, list[Path]] = {s["id"]: [] for s in SUBJECTS}
-    for note, result in zip(notes, results):
-        if isinstance(result, Path) and result is not None:
-            subject_map[note["subjectId"]].append(result)
-
-    for subject_id, txt_paths in subject_map.items():
-        subject_file = Path(SUBJECTS_DIR) / f"{subject_id}.txt"
-        combined = []
-        for p in txt_paths:
-            try:
-                combined.append(p.read_text(encoding="utf-8", errors="replace"))
-            except Exception:
-                pass
-        if combined:
-            subject_file.write_text("\n\n---\n\n".join(combined), encoding="utf-8")
-
-    # Build RAG index
-    await rag_service.build_index()
+    processed_count = 0
+    for note in notes:
+        path, text = await process_note(note)
+        if path and text.strip():
+            chunks_added = await rag_service.add_note_to_index(
+                note["subjectId"], note["notes_id"], text
+            )
+            if chunks_added > 0:
+                processed_count += 1
 
     return {"status": "done", "notes_processed": processed_count}

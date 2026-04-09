@@ -1,97 +1,164 @@
-import asyncio
-import json
 import logging
-import re
-import subprocess
 from pathlib import Path
-from backend.config import INDEX_DIR, SUBJECTS_DIR
+
+import chromadb
+from chromadb.config import Settings as ChromaSettings
+import httpx
+
+from backend.config import INDEX_DIR, OLLAMA_BASE_URL, EMBEDDING_MODEL
 
 logger = logging.getLogger(__name__)
 
+# Lazy-loaded singletons
+_client: chromadb.ClientAPI | None = None
 
-def _run_subprocess(cmd: list[str]) -> tuple[str, str, int]:
-    """Run a subprocess synchronously and return (stdout, stderr, returncode).
 
-    Returns (-1, error_message, -1) when the executable cannot be found so
-    callers can distinguish a missing CLI from a non-zero exit code.
-    """
-    try:
-        result = subprocess.run(
-            cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
+def _get_client() -> chromadb.ClientAPI:
+    global _client
+    if _client is None:
+        index_path = Path(INDEX_DIR)
+        index_path.mkdir(parents=True, exist_ok=True)
+        _client = chromadb.PersistentClient(
+            path=str(index_path),
+            settings=ChromaSettings(anonymized_telemetry=False),
         )
-        return result.stdout.strip(), result.stderr.strip(), result.returncode
-    except FileNotFoundError:
-        return "", f"Executable not found: {cmd[0]!r}. Is uv installed and on PATH?", -1
+        logger.info("ChromaDB initialized at %s", index_path)
+    return _client
 
 
-async def build_index() -> None:
-    """Build the notebooklm-py RAG index from processed subject text files."""
-    subjects_path = Path(SUBJECTS_DIR)
-    index_path = Path(INDEX_DIR)
+# ---------------------------------------------------------------------------
+# Embedding via Ollama — no PyTorch, no local model loading
+# ---------------------------------------------------------------------------
 
-    if not subjects_path.exists() or not any(subjects_path.glob("*.txt")):
-        logger.warning("build_index: no subject text files found in %s, skipping", subjects_path)
-        return
+async def _embed(texts: list[str]) -> list[list[float]]:
+    """Get embeddings from Ollama's /api/embed endpoint.
 
-    logger.info("Building RAG index: input=%s output=%s", subjects_path, index_path)
-    cmd = ["uv", "run", "notebooklm", "index", "--input", str(subjects_path), "--output", str(index_path)]
-    stdout, stderr, rc = await asyncio.to_thread(_run_subprocess, cmd)
+    Uses embeddinggemma:latest by default (configurable via EMBEDDING_MODEL env).
+    """
+    async with httpx.AsyncClient(timeout=120) as client:
+        resp = await client.post(
+            f"{OLLAMA_BASE_URL}/api/embed",
+            json={"model": EMBEDDING_MODEL, "input": texts},
+        )
+        resp.raise_for_status()
+        data = resp.json()
+    return data["embeddings"]
 
-    if rc == -1:
-        logger.error("build_index: %s", stderr)
-    elif rc != 0:
-        logger.error("notebooklm index failed (rc=%d): %s", rc, stderr)
-    else:
-        logger.info("RAG index built successfully")
-        if stderr:
-            logger.debug("notebooklm index stderr: %s", stderr)
 
+# ---------------------------------------------------------------------------
+# Chunking
+# ---------------------------------------------------------------------------
+
+def _chunk_text(text: str, chunk_size: int = 500, overlap: int = 50) -> list[str]:
+    """Split text into overlapping word-based chunks."""
+    words = text.split()
+    chunks = []
+    start = 0
+    while start < len(words):
+        end = start + chunk_size
+        chunk = " ".join(words[start:end])
+        if chunk.strip():
+            chunks.append(chunk)
+        start += chunk_size - overlap
+    return chunks
+
+
+# ---------------------------------------------------------------------------
+# Index operations
+# ---------------------------------------------------------------------------
+
+async def add_note_to_index(subject_id: int, notes_id: int, text: str) -> int:
+    """Chunk text, embed via Ollama, upsert into ChromaDB."""
+    client = _get_client()
+    collection = client.get_or_create_collection(
+        name=f"subject_{subject_id}",
+        metadata={"subject_id": subject_id},
+    )
+
+    chunks = _chunk_text(text)
+    if not chunks:
+        return 0
+
+    # Batch embed through Ollama
+    try:
+        embeddings = await _embed(chunks)
+    except Exception as e:
+        logger.error("Embedding failed for notes_id=%d: %s", notes_id, e)
+        return 0
+
+    ids = [f"{notes_id}_chunk_{i}" for i in range(len(chunks))]
+    metadatas = [{"notes_id": notes_id, "chunk_index": i} for i in range(len(chunks))]
+
+    collection.upsert(
+        ids=ids,
+        embeddings=embeddings,
+        documents=chunks,
+        metadatas=metadatas,
+    )
+
+    logger.info("Indexed %d chunks for notes_id=%d into subject_%d", len(chunks), notes_id, subject_id)
+    return len(chunks)
+
+
+def remove_note_from_index(subject_id: int, notes_id: int) -> None:
+    """Remove all chunks for a specific note from the index."""
+    client = _get_client()
+    try:
+        collection = client.get_collection(f"subject_{subject_id}")
+        collection.delete(where={"notes_id": notes_id})
+        logger.info("Removed notes_id=%d from subject_%d index", notes_id, subject_id)
+    except Exception:
+        pass  # Collection may not exist yet
+
+
+def is_note_embedded(notes_id: int, subject_id: int) -> bool:
+    """Check if a note already has chunks in the index."""
+    client = _get_client()
+    try:
+        collection = client.get_collection(f"subject_{subject_id}")
+        results = collection.get(where={"notes_id": notes_id}, limit=1)
+        return len(results["ids"]) > 0
+    except Exception:
+        return False
+
+
+# ---------------------------------------------------------------------------
+# Query
+# ---------------------------------------------------------------------------
 
 async def query(subject_id: int, question: str, top_k: int = 5) -> list[str]:
-    """Query the RAG index for relevant chunks for a given subject and question."""
-    index_path = Path(INDEX_DIR)
+    """Query the vector index for relevant chunks."""
+    client = _get_client()
 
-    if not index_path.exists():
-        logger.warning("RAG index not found at %s — returning empty context. Run ingest first.", index_path)
-        return []
-
-    logger.debug("RAG query: subject_id=%d top_k=%d question=%r", subject_id, top_k, question[:80])
-    cmd = [
-        "uv", "run", "notebooklm", "query",
-        "--index", str(index_path),
-        "--subject", str(subject_id),
-        "--query", question,
-        "--top-k", str(top_k),
-    ]
-    stdout, stderr, rc = await asyncio.to_thread(_run_subprocess, cmd)
-
-    if rc == -1:
-        logger.error("RAG query: %s", stderr)
-        return []
-
-    if rc != 0:
-        logger.error("notebooklm query failed (rc=%d): %s", rc, stderr)
-        return []
-
-    if not stdout:
-        logger.debug("RAG query returned empty output")
-        return []
-
-    # Try JSON array first
     try:
-        parsed = json.loads(stdout)
-        if isinstance(parsed, list):
-            logger.debug("RAG query parsed %d chunks (JSON)", len(parsed))
-            return [str(c) for c in parsed]
-    except json.JSONDecodeError:
-        pass
+        collection = client.get_collection(f"subject_{subject_id}")
+    except Exception:
+        logger.warning("No index found for subject_%d", subject_id)
+        return []
 
-    # Fallback: split by double newlines
-    chunks = [c.strip() for c in re.split(r"\n\n+", stdout) if c.strip()]
-    logger.debug("RAG query parsed %d chunks (plaintext fallback)", len(chunks))
-    return chunks
+    try:
+        q_embedding = await _embed([question])
+    except Exception as e:
+        logger.error("Query embedding failed: %s", e)
+        return []
+
+    results = collection.query(query_embeddings=q_embedding, n_results=top_k)
+
+    documents = results.get("documents", [[]])[0]
+    logger.debug("RAG query returned %d chunks for subject_%d", len(documents), subject_id)
+    return documents
+
+
+# ---------------------------------------------------------------------------
+# Stats
+# ---------------------------------------------------------------------------
+
+def get_index_stats() -> dict:
+    """Return stats for all indexed collections."""
+    client = _get_client()
+    collections = client.list_collections()
+    stats = {}
+    for col in collections:
+        c = client.get_collection(col.name)
+        stats[col.name] = {"count": c.count(), "metadata": col.metadata}
+    return stats

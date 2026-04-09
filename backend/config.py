@@ -1,3 +1,5 @@
+import os
+
 SUBJECTS = [
     {"id": 30,  "name": "Object Oriented Programming",    "code": "OOP",  "color": "#6366f1"},
     {"id": 32,  "name": "Database Management Systems",    "code": "DBMS", "color": "#0ea5e9"},
@@ -10,11 +12,14 @@ SUBJECTS = [
 SUBJECT_IDS = {s["id"] for s in SUBJECTS}
 
 NOTES_API_URL = "https://veer-preps-api.vercel.app/api/notes/"
-DATA_DIR = "./data"
-RAW_DIR = "./data/raw"
-PROCESSED_DIR = "./data/processed"
-SUBJECTS_DIR = "./data/subjects"
-INDEX_DIR = "./data/index"
+DATA_DIR = os.getenv("DATA_DIR", "./data")
+RAW_DIR = os.path.join(DATA_DIR, "raw")
+PROCESSED_DIR = os.path.join(DATA_DIR, "processed")
+INDEX_DIR = os.path.join(DATA_DIR, "index")
+
+# Ollama embedding config
+OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "embeddinggemma:latest")
 
 ANTHROPIC_MODELS = [
     "claude-opus-4-5",

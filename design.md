@@ -30,16 +30,16 @@ A student-facing learning support dashboard that connects to the VeerPreps notes
                                                          │
                     ┌────────────────────┬───────────────┼───────────────┐
                     │                    │               │               │
-             Tesseract CLI      opendataloader-pdf   python-pptx   notebooklm-py
-             (handwritten OCR)  (typed PDF parse)    (PPTX parse)   (RAG index)
+             pytesseract        PyMuPDF              python-pptx   ChromaDB + Ollama
+             (handwritten OCR)  (typed PDF parse)    (PPTX)        (RAG index)
 ```
 
-Two independent deployable units:
+Two independent deployable units (now containerised via Docker):
 
 - `frontend/` — React + Vite + TypeScript SPA
 - `backend/` — FastAPI Python server
 
-They communicate via REST + Server-Sent Events (SSE) for streaming responses.
+They communicate via REST + Server-Sent Events (SSE) for streaming responses. Both can be run natively or via `docker-compose up`.
 
 ---
 
@@ -102,7 +102,8 @@ backend/
 |--------|------|-------------|
 | `GET` | `/api/notes` | All notes grouped by subject_id (filtered to configured 6) |
 | `GET` | `/api/notes/{subject_id}` | Notes for a single subject |
-| `POST` | `/api/notes/ingest` | Download + process all notes, build RAG index |
+| `GET` | `/api/notes/{notes_id}/preview` | Download + text extract preview (first 2000 chars) |
+| `POST` | `/api/notes/ingest` | Build RAG index for selected notes `{"notes_ids": [1,2,3]}` |
 
 #### Chat (all stream SSE)
 
@@ -212,44 +213,26 @@ ANTHROPIC_MODELS = [
 
 ### 4.4 Notes Processing Pipeline (`services/processor.py`)
 
-Triggered by `POST /api/notes/ingest`. Downloads and processes all notes for the 6 configured subjects.
+Triggered by `POST /api/notes/ingest` OR `GET /api/notes/{notes_id}/preview`.
 
 **File type detection:**
 
 | Condition | Processor |
 |-----------|-----------|
 | URL ends with `.pptx` | `python-pptx` library |
-| URL ends with `.pdf` AND filename contains "handwritten" (case-insensitive) | Tesseract CLI (after converting PDF pages to images via `pdf2image`) |
-| URL ends with `.pdf` (all others) | `opendataloader-pdf` CLI |
+| URL ends with `.pdf` AND filename contains "handwritten" (case-insensitive) | `pytesseract` (Python wrapper for Tesseract) |
+| URL ends with `.pdf` (all others) | `PyMuPDF` (fitz) |
 
 **Processing flow per note:**
 
 1. Download file to `./data/raw/{notes_id}.{ext}`
 2. Detect file type
-3. Extract text to `./data/processed/{notes_id}.txt`
-4. On completion of all notes for a subject, append all `.txt` files into `./data/subjects/{subject_id}.txt`
-
-**CLI invocations:**
-
-```bash
-# opendataloader-pdf
-opendataloader-pdf ./data/raw/{notes_id}.pdf --output ./data/processed/{notes_id}.txt
-
-# Tesseract (after pdf2image conversion to PNG pages)
-tesseract ./data/raw/{notes_id}_page_1.png stdout >> ./data/processed/{notes_id}.txt
-
-# notebooklm-py (index build — run once after all subjects processed)
-notebooklm-py index --input ./data/subjects/ --output ./data/index/
-```
+3. Extract text, return to caller
+4. (If ingestion) -> Feed extracted text straight to ChromaDB (no txt files merged on disk)
 
 ### 4.5 RAG Service (`services/rag_service.py`)
 
-Wraps `notebooklm-py` CLI for querying.
-
-```bash
-# Query example
-notebooklm-py query --index ./data/index/ --subject {subject_id} --query "{question}" --top-k 5
-```
+Uses `chromadb` as an embedded vector database and `httpx` to query a local Ollama service (`/api/embed`) for embeddings (`embeddinggemma:latest`). No external dependencies required outside Docker.
 
 Returns retrieved chunks as a list of strings. These chunks are injected into the LLM prompt as context.
 
@@ -518,18 +501,17 @@ User opens Settings, selects provider
 |---------|---------|
 | `fastapi` | Web framework |
 | `uvicorn` | ASGI server |
-| `httpx` | Async HTTP (notes API fetch) |
+| `httpx` | Async HTTP |
 | `openai` | OpenAI + Ollama + Custom provider SDK |
 | `anthropic` | Anthropic provider SDK |
 | `python-pptx` | PPTX text extraction |
-| `pdf2image` | PDF → image for Tesseract |
+| `pymupdf` | PDF text extraction and rendering |
+| `pytesseract` | Python wrapper for Tesseract OCR |
+| `chromadb` | Embedded vector database |
 | `pydantic` | Request/response validation |
 
-**CLI tools (must be installed and on PATH):**
-
-- `tesseract` — Tesseract OCR
-- `opendataloader-pdf` — PDF text extraction CLI
-- `notebooklm-py` — RAG index + query CLI
+**System dependencies (handled by Docker):**
+- `tesseract-ocr` — Tesseract OCR binaries
 
 ### Frontend
 

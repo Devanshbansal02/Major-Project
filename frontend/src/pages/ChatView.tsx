@@ -94,7 +94,6 @@ export default function ChatView() {
   }
 
   const modeLabel = mode === "doubt" ? "Ask a Doubt" : "Explain Again";
-  const modeAccent = mode === "doubt" ? "#818cf8" : "#38bdf8";
 
   return (
     <div className="chat-page">
@@ -103,7 +102,7 @@ export default function ChatView() {
         <button className="back-btn" onClick={() => navigate(`/subject/${subjectId}`)}>← Back</button>
 
         <div className="chat-header-center">
-          <span className="chat-mode-pill" style={{ color: modeAccent, borderColor: `${modeAccent}40`, background: `${modeAccent}12` }}>
+          <span className="chat-mode-pill">
             {modeLabel}
           </span>
           <span className="chat-subject-name">{subjectName || `Subject ${subjectId}`}</span>
@@ -232,7 +231,11 @@ export default function ChatView() {
           display: flex;
           flex-direction: column;
           height: 100vh;
+          max-width: 900px;
+          margin: 0 auto;
           overflow: hidden;
+          border-left: 1px solid var(--border-subtle);
+          border-right: 1px solid var(--border-subtle);
         }
 
         /* Header */
@@ -262,9 +265,11 @@ export default function ChatView() {
           text-transform: uppercase;
           padding: 2px 8px;
           border-radius: 99px;
-          border: 1px solid;
+          border: 1px solid var(--border-strong);
           font-family: var(--font-mono);
           width: fit-content;
+          color: var(--text-primary);
+          background: var(--bg-elevated);
         }
 
         .chat-subject-name {

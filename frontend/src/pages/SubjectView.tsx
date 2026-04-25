@@ -10,13 +10,7 @@ const FILE_TYPE_LABELS: Record<string, string> = {
   image: "IMG",
 };
 
-const FILE_TYPE_COLORS: Record<string, string> = {
-  pdf_typed: "#f43f5e",
-  pdf_handwritten: "#f59e0b",
-  pptx: "#f97316",
-  docx: "#3b82f6",
-  image: "#22c55e",
-};
+
 
 interface SubjectMeta { id: number; name: string; code: string; color: string; }
 
@@ -199,13 +193,7 @@ export default function SubjectView() {
                 )}
 
                 <div className="sv-note-left">
-                  <span
-                    className="sv-type-badge"
-                    style={{
-                      color: FILE_TYPE_COLORS[note.file_type] ?? "#9996a0",
-                      background: `${FILE_TYPE_COLORS[note.file_type] ?? "#9996a0"}18`,
-                    }}
-                  >
+                  <span className="sv-type-badge">
                     {FILE_TYPE_LABELS[note.file_type] ?? note.file_type}
                   </span>
                   <span className="sv-note-name">{note.original_name}</span>
@@ -325,8 +313,8 @@ export default function SubjectView() {
         .sv-note-row:hover { background: var(--bg-elevated); }
         .sv-note-row:active { transform: scale(0.98); }
         .sv-note-row.selected {
-          border-color: rgba(99,102,241,0.3);
-          background: var(--accent-dim);
+          border-color: var(--text-primary);
+          background: var(--bg-hover);
         }
 
         /* Custom checkbox */
@@ -341,8 +329,8 @@ export default function SubjectView() {
         .sv-checkbox.checked { background: var(--accent); border-color: var(--accent); }
 
         .sv-note-left { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1; }
-        .sv-type-badge { font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; padding: 2px 6px; border-radius: 3px; font-family: var(--font-mono); flex-shrink: 0; }
-        .sv-note-name { font-size: 13px; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .sv-type-badge { font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; padding: 2px 6px; border: 1px solid var(--border-strong); color: var(--text-primary); font-family: var(--font-mono); flex-shrink: 0; }
+        .sv-note-name { font-size: 14px; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
         .sv-note-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
         .sv-note-date { font-size: 11px; color: var(--text-muted); font-family: var(--font-mono); white-space: nowrap; }
@@ -398,31 +386,18 @@ export default function SubjectView() {
         }
         .sv-action-btn:active { transform: scale(0.97); }
 
-        .sv-action-btn[data-type="doubt"] {
-          background: color-mix(in srgb, #6366f1 10%, var(--bg-surface));
-          border-color: rgba(99,102,241,0.25);
-          color: #818cf8;
-        }
-        .sv-action-btn[data-type="doubt"]:hover {
-          background: color-mix(in srgb, #6366f1 18%, var(--bg-surface));
-        }
-
-        .sv-action-btn[data-type="explain"] {
-          background: color-mix(in srgb, #0ea5e9 10%, var(--bg-surface));
-          border-color: rgba(14,165,233,0.25);
-          color: #38bdf8;
-        }
-        .sv-action-btn[data-type="explain"]:hover {
-          background: color-mix(in srgb, #0ea5e9 18%, var(--bg-surface));
-        }
-
+        .sv-action-btn[data-type="doubt"],
+        .sv-action-btn[data-type="explain"],
         .sv-action-btn[data-type="trivia"] {
-          background: color-mix(in srgb, #22c55e 10%, var(--bg-surface));
-          border-color: rgba(34,197,94,0.25);
-          color: #4ade80;
+          background: var(--bg-elevated);
+          border-color: var(--border-strong);
+          color: var(--text-primary);
         }
+        .sv-action-btn[data-type="doubt"]:hover,
+        .sv-action-btn[data-type="explain"]:hover,
         .sv-action-btn[data-type="trivia"]:hover {
-          background: color-mix(in srgb, #22c55e 18%, var(--bg-surface));
+          background: var(--bg-hover);
+          border-color: var(--text-primary);
         }
       `}</style>
     </div>

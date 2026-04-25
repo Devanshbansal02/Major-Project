@@ -56,7 +56,7 @@ export default function TriviaView() {
       <div className="page-header">
         <button className="back-btn" onClick={() => navigate(`/subject/${subjectId}`)}>← Back</button>
         <div>
-          <div className="trivia-eyebrow section-label" style={{ color: "var(--success)", borderColor: "rgba(34,197,94,0.3)" }}>
+          <div className="trivia-eyebrow section-label">
             Trivia Quiz
           </div>
           <h1 className="trivia-subject-name">{subjectName || `Subject ${subjectId}`}</h1>
@@ -180,18 +180,16 @@ export default function TriviaView() {
           width: 100%; height: 100%;
           border-radius: 50%;
           border: 2px solid transparent;
-          border-top-color: var(--success);
+          border-top-color: var(--text-primary);
           animation: spin 1s linear infinite;
         }
 
         .trivia-loading-ring div:nth-child(2) {
-          border-top-color: var(--accent);
           animation-delay: -0.33s;
           opacity: 0.6;
         }
 
         .trivia-loading-ring div:nth-child(3) {
-          border-top-color: #38bdf8;
           animation-delay: -0.66s;
           opacity: 0.35;
         }

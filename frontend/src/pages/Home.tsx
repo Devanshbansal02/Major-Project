@@ -133,16 +133,10 @@ export default function Home() {
           flex-shrink: 0;
         }
 
-        .student-icon {
-          background: rgba(99,102,241,0.1);
-          color: var(--accent-hover);
-          border: 1px solid rgba(99,102,241,0.2);
-        }
-
-        .faculty-icon {
-          background: rgba(14,165,233,0.1);
-          color: #38bdf8;
-          border: 1px solid rgba(14,165,233,0.2);
+        .student-icon, .faculty-icon {
+          background: var(--bg-elevated);
+          color: var(--text-primary);
+          border: 1px solid var(--border-strong);
         }
 
         .home-card-text { flex: 1; display: flex; flex-direction: column; gap: 4px; min-width: 0; }

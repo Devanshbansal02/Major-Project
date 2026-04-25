@@ -12,37 +12,37 @@
 /* ─── Tokens ─────────────────────────────────────────────── */
 :root {
   /* Surface */
-  --bg-base: #0c0c0e;
-  --bg-surface: #111115;
-  --bg-elevated: #18181d;
-  --bg-hover: #1f1f26;
+  --bg-base: #000000;
+  --bg-surface: #0a0a0a;
+  --bg-elevated: #141414;
+  --bg-hover: #1f1f1f;
 
   /* Borders: hairlines only */
-  --border: rgba(255, 255, 255, 0.08);
-  --border-subtle: rgba(255, 255, 255, 0.05);
-  --border-strong: rgba(255, 255, 255, 0.14);
+  --border: #333333;
+  --border-subtle: #222222;
+  --border-strong: #555555;
 
   /* Text */
-  --text-primary: #f0ede6;
-  --text-secondary: #9996a0;
-  --text-muted: #55535e;
+  --text-primary: #ffffff;
+  --text-secondary: #cccccc;
+  --text-muted: #888888;
 
-  /* Accent (indigo: kept from design.md as default) */
+  /* Accent (indigo: requested by user) */
   --accent: #6366f1;
   --accent-dim: rgba(99, 102, 241, 0.12);
   --accent-hover: #818cf8;
 
   /* Semantic */
-  --success: #22c55e;
-  --danger: #f43f5e;
-  --warning: #f59e0b;
+  --success: #ffffff;
+  --danger: #ffffff;
+  --warning: #ffffff;
 
   /* Radius */
-  --r-xs: 4px;
-  --r-sm: 8px;
-  --r-md: 12px;
-  --r-lg: 18px;
-  --r-xl: 24px;
+  --r-xs: 0px;
+  --r-sm: 0px;
+  --r-md: 0px;
+  --r-lg: 0px;
+  --r-xl: 0px;
 
   /* Easing: from design-eng skill */
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
@@ -68,7 +68,7 @@ body {
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  font-size: 15px;
+  font-size: 16px;
 }
 
 body::after {
@@ -128,8 +128,8 @@ textarea::placeholder {
 /* ─── Layout ─────────────────────────────────────────────── */
 .page {
   min-height: 100vh;
-  padding: 40px 44px;
-  max-width: 1120px;
+  padding: 60px 40px;
+  max-width: 900px;
   margin: 0 auto;
 }
 

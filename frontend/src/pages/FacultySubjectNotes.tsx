@@ -21,13 +21,7 @@ const FILE_TYPE_LABELS: Record<string, string> = {
   image: "Image",
 };
 
-const FILE_TYPE_COLORS: Record<string, string> = {
-  pdf_typed: "#ef4444",
-  pdf_handwritten: "#f59e0b",
-  pptx: "#f97316",
-  docx: "#3b82f6",
-  image: "#10b981",
-};
+
 
 export default function FacultySubjectNotes() {
   const { id } = useParams<{ id: string }>();
@@ -195,10 +189,7 @@ export default function FacultySubjectNotes() {
         {notes.map(note => (
           <div key={note.id} className="fsn-note-row">
             <div className="fsn-note-meta">
-              <span
-                className="fsn-type-badge"
-                style={{ background: `${FILE_TYPE_COLORS[note.file_type]}22`, color: FILE_TYPE_COLORS[note.file_type], border: `1px solid ${FILE_TYPE_COLORS[note.file_type]}44` }}
-              >
+              <span className="fsn-type-badge">
                 {FILE_TYPE_LABELS[note.file_type] ?? note.file_type}
               </span>
               <span className="fsn-date">{formatDate(note.class_date)}</span>
@@ -217,7 +208,7 @@ export default function FacultySubjectNotes() {
       <style>{`
         .fsn-subject-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; }
         .fsn-title { font-size: 20px; font-weight: 700; }
-        .fsn-upload-card { background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 24px; margin-bottom: 28px; }
+        .fsn-upload-card { background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: var(--r-md); padding: 24px; margin-bottom: 28px; }
         .fsn-upload-title { font-size: 15px; font-weight: 600; margin-bottom: 16px; }
         .fsn-upload-form { display: flex; flex-direction: column; gap: 14px; }
         .fsn-field-row { display: flex; gap: 16px; flex-wrap: wrap; }
@@ -225,25 +216,28 @@ export default function FacultySubjectNotes() {
         .fsn-label { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; }
         .fsn-file-input { font-size: 13px; color: var(--text-secondary); }
         .fsn-file-hint { font-size: 11px; color: var(--text-muted); }
-        .fsn-date-input { background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 12px; font-size: 13px; color: var(--text-primary); outline: none; transition: border-color 150ms; }
+        .fsn-date-input { background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 8px 12px; font-size: 13px; color: var(--text-primary); outline: none; transition: border-color 150ms; }
         .fsn-date-input:focus { border-color: var(--accent); }
         .fsn-check-label { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--text-secondary); cursor: pointer; }
+        .fsn-check-label input { width: auto; }
         .fsn-upload-error { font-size: 13px; color: #f87171; }
         .fsn-upload-progress { font-size: 13px; color: #34d399; }
-        .fsn-upload-btn { background: var(--accent); color: #fff; border: none; border-radius: var(--radius-md); padding: 10px 20px; font-size: 13px; font-weight: 600; cursor: pointer; align-self: flex-start; transition: opacity 150ms; }
+        .fsn-upload-btn { background: var(--bg-elevated); color: var(--text-primary); border: 1px solid var(--border-strong); border-radius: var(--r-md); padding: 10px 20px; font-size: 13px; font-weight: 500; cursor: pointer; align-self: flex-start; transition: background 150ms var(--ease-out), border-color 150ms var(--ease-out), transform 120ms var(--ease-out); }
+        .fsn-upload-btn:hover:not(:disabled) { background: var(--bg-hover); border-color: rgba(255,255,255,0.25); }
+        .fsn-upload-btn:active:not(:disabled) { transform: scale(0.97); }
         .fsn-upload-btn:disabled { opacity: 0.5; cursor: not-allowed; }
         .fsn-section-label { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 12px; }
         .fsn-empty { color: var(--text-muted); font-size: 14px; }
         .fsn-list { display: flex; flex-direction: column; gap: 8px; }
-        .fsn-note-row { background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 14px 18px; display: flex; align-items: center; gap: 14px; transition: border-color 150ms; }
+        .fsn-note-row { background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: var(--r-md); padding: 14px 18px; display: flex; align-items: center; gap: 14px; transition: border-color 150ms; }
         .fsn-note-row:hover { border-color: var(--border); }
         .fsn-note-meta { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
-        .fsn-type-badge { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; padding: 3px 7px; border-radius: 4px; }
+        .fsn-type-badge { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; padding: 3px 7px; border: 1px solid var(--border-strong); color: var(--text-primary); }
         .fsn-date { font-size: 12px; color: var(--text-muted); }
-        .fsn-embedded { font-size: 11px; color: #34d399; }
+        .fsn-embedded { font-size: 11px; color: var(--text-primary); }
         .fsn-not-embedded { font-size: 11px; color: var(--text-muted); }
         .fsn-note-name { font-size: 13px; color: var(--text-primary); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .fsn-delete { background: none; border: none; cursor: pointer; color: var(--text-muted); font-size: 14px; padding: 4px 8px; border-radius: var(--radius-sm); transition: color 150ms; flex-shrink: 0; }
+        .fsn-delete { background: none; border: none; cursor: pointer; color: var(--text-muted); font-size: 14px; padding: 4px 8px; border-radius: var(--r-sm); transition: color 150ms; flex-shrink: 0; }
         .fsn-delete:hover { color: #f87171; }
       `}</style>
     </div>

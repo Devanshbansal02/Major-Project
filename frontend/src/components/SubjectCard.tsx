@@ -40,37 +40,16 @@ export default function SubjectCard({ subject, index = 0 }: Props) {
           display: flex;
           background: var(--bg-surface);
           border: 1px solid var(--border-subtle);
-          border-radius: var(--r-md);
-          overflow: hidden;
           cursor: pointer;
-          transition:
-            border-color 300ms var(--ease-out),
-            transform 250ms var(--ease-spring),
-            background 300ms var(--ease-out),
-            box-shadow 300ms var(--ease-out);
+          transition: border-color 200ms var(--ease-out), background 200ms var(--ease-out);
           animation: fadeUp 400ms var(--ease-out) both;
           min-height: 130px;
         }
 
-        .subject-card::before {
-          content: "";
-          position: absolute;
-          inset: 0;
-          background: radial-gradient(600px circle at 100% 0%, color-mix(in srgb, var(--accent-color) 15%, transparent), transparent 40%);
-          opacity: 0;
-          transition: opacity 400ms var(--ease-out);
-          pointer-events: none;
-        }
-
         @media (hover: hover) and (pointer: fine) {
           .subject-card:hover {
-            border-color: color-mix(in srgb, var(--accent-color) 40%, transparent);
+            border-color: var(--text-primary);
             background: var(--bg-elevated);
-            transform: translateY(-4px) scale(1.01);
-            box-shadow: 0 12px 30px -10px rgba(0,0,0,0.5), 0 4px 12px -5px color-mix(in srgb, var(--accent-color) 20%, transparent);
-          }
-          .subject-card:hover::before {
-            opacity: 1;
           }
           .subject-card:hover .sc-arrow {
             opacity: 1;
@@ -136,7 +115,7 @@ export default function SubjectCard({ subject, index = 0 }: Props) {
 
         .sc-arrow {
           font-size: 14px;
-          color: var(--accent-color);
+          color: var(--text-primary);
           opacity: 0;
           transform: translateX(-6px);
           transition: opacity 200ms var(--ease-out), transform 200ms var(--ease-out);

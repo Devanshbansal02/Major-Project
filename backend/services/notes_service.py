@@ -11,10 +11,20 @@ CACHE_TTL = 300  # 5 minutes
 async def fetch_notes(subject_id: Optional[int] = None) -> list[dict]:
     now = time.time()
     if now - _cache["ts"] > CACHE_TTL or not _cache["data"]:
-        async with httpx.AsyncClient(timeout=15) as client:
-            r = await client.get(NOTES_API_URL)
-            r.raise_for_status()
-            raw = r.json()
+        try:
+            async with httpx.AsyncClient(timeout=15) as client:
+                r = await client.get(NOTES_API_URL)
+                r.raise_for_status()
+                raw = r.json()
+        except Exception as exc:
+            import logging
+            logging.getLogger(__name__).warning(
+                "Failed to fetch notes from VeerPreps API: %s", exc
+            )
+            # Return stale cache or empty list — don't crash
+            return _cache["data"] if subject_id is None else [
+                n for n in _cache["data"] if n["subjectId"] == subject_id
+            ]
 
         # API returns {"notes": [...]}
         items = raw.get("notes", []) if isinstance(raw, dict) else raw

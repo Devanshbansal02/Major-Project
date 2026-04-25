@@ -1,6 +1,6 @@
 import logging
 from fastapi import APIRouter
-from backend.config import ANTHROPIC_MODELS
+from backend.config import ANTHROPIC_MODELS, OLLAMA_BASE_URL
 import httpx
 
 router = APIRouter()
@@ -34,7 +34,7 @@ async def get_models(provider: str, api_key: str = "", base_url: str = "", custo
     if provider == "ollama":
         try:
             async with httpx.AsyncClient(timeout=5) as client:
-                r = await client.get("http://localhost:11434/api/tags")
+                r = await client.get(f"{OLLAMA_BASE_URL}/api/tags")
                 r.raise_for_status()
                 data = r.json()
                 models = [m["name"] for m in data.get("models", [])]

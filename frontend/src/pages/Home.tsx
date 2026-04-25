@@ -49,7 +49,7 @@ export default function Home() {
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          padding: 40px 24px;
+          padding: 40px 24px 12vh 24px;
           gap: 52px;
         }
 

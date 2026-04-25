@@ -15,7 +15,7 @@ export default function SubjectCard({ subject, index = 0 }: Props) {
         className="subject-card"
         onClick={() => navigate(`/subject/${subject.id}`)}
         style={{
-          "--accent-color": subject.color,
+          "--accent-color": "var(--accent)",
           animationDelay: `${index * 55}ms`,
         } as React.CSSProperties}
       >
@@ -23,7 +23,6 @@ export default function SubjectCard({ subject, index = 0 }: Props) {
         <div className="sc-bar" />
 
         <div className="sc-body">
-          <span className="sc-code">{subject.code}</span>
           <h2 className="sc-name">{subject.name}</h2>
           <div className="sc-footer">
             <span className="sc-count">
@@ -48,7 +47,7 @@ export default function SubjectCard({ subject, index = 0 }: Props) {
 
         @media (hover: hover) and (pointer: fine) {
           .subject-card:hover {
-            border-color: var(--text-primary);
+            border-color: var(--border);
             background: var(--bg-elevated);
           }
           .subject-card:hover .sc-arrow {

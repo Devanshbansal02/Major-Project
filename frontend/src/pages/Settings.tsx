@@ -45,7 +45,6 @@ export default function Settings() {
           display: flex;
           flex-direction: column;
           gap: 36px;
-          max-width: 640px;
         }
 
         .settings-section {

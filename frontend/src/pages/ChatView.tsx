@@ -95,6 +95,17 @@ export default function ChatView() {
 
   const modeLabel = mode === "doubt" ? "Ask a Doubt" : "Explain Again";
 
+  function saveChat() {
+    const text = messages.map(m => `${m.role === 'user' ? 'You' : 'Assistant'}:\n${m.content}\n`).join("\n");
+    const blob = new Blob([text], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `bloom-chat-${subjectName || 'subject'}-${Date.now()}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   return (
     <div className="chat-page">
       {/* Header */}
@@ -108,17 +119,30 @@ export default function ChatView() {
           <span className="chat-subject-name">{subjectName || `Subject ${subjectId}`}</span>
         </div>
 
-        <button
-          className="chat-clear-btn"
-          onClick={() => setMessages([])}
-          disabled={messages.length === 0}
-          title="Clear conversation"
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
-          </svg>
-          Clear
-        </button>
+        <div className="chat-header-actions" style={{ display: "flex", gap: "8px" }}>
+          <button
+            className="chat-clear-btn"
+            onClick={saveChat}
+            disabled={messages.length === 0}
+            title="Save conversation"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            Save
+          </button>
+          <button
+            className="chat-clear-btn"
+            onClick={() => setMessages([])}
+            disabled={messages.length === 0}
+            title="Clear conversation"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+            </svg>
+            Clear
+          </button>
+        </div>
       </div>
 
       {/* Topic gate for Explain mode */}

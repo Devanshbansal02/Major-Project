@@ -36,13 +36,15 @@ export default function FacultyDashboard() {
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
     setFormError("");
-    if (!form.name.trim() || !form.code.trim()) { setFormError("Name and code are required"); return; }
+    if (!form.name.trim()) { setFormError("Name is required"); return; }
     setSaving(true);
     try {
+      const generatedCode = form.name.substring(0, 4).toUpperCase();
+      const payload = { name: form.name, code: generatedCode, color: "#ffffff" };
       const r = await fetch(`${BASE_URL}/api/faculty/subjects`, {
         method: "POST",
         headers: authHeaders(token!),
-        body: JSON.stringify(form),
+        body: JSON.stringify(payload),
       });
       if (!r.ok) { const d = await r.json(); throw new Error(d.detail); }
       setForm({ name: "", code: "", color: PALETTE[0] });
@@ -81,7 +83,7 @@ export default function FacultyDashboard() {
           <h1 className="fd-name">{facultyName}</h1>
         </div>
         <div className="fd-header-actions">
-          <button className="fd-student-btn" onClick={() => navigate("/")}>Student View</button>
+          <button className="fd-student-btn" onClick={() => navigate("/student")}>Student View</button>
           <button className="fd-logout" onClick={handleLogout}>Sign Out</button>
         </div>
       </div>
@@ -96,13 +98,6 @@ export default function FacultyDashboard() {
       {showForm && (
         <form className="fd-form" onSubmit={handleCreate}>
           <input className="fd-input" placeholder="Subject name" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} required />
-          <input className="fd-input fd-input-sm" placeholder="Code (e.g. DBMS)" value={form.code} onChange={e => setForm(f => ({ ...f, code: e.target.value }))} required />
-          <div className="fd-colors">
-            {PALETTE.map(c => (
-              <button key={c} type="button" className={`fd-color-swatch ${form.color === c ? "active" : ""}`}
-                style={{ background: c }} onClick={() => setForm(f => ({ ...f, color: c }))} />
-            ))}
-          </div>
           {formError && <p className="fd-form-error">{formError}</p>}
           <button className="fd-submit" type="submit" disabled={saving}>{saving ? "Saving…" : "Create Subject"}</button>
         </form>
@@ -114,12 +109,11 @@ export default function FacultyDashboard() {
 
       <div className="fd-grid">
         {subjects.map(s => (
-          <div key={s.id} className="fd-subject-card" style={{ borderTopColor: s.color }}>
-            <div className="fd-card-top">
-              <span className="fd-code" style={{ color: s.color }}>{s.code}</span>
+          <div key={s.id} className="fd-subject-card">
+            <div className="fd-card-header">
+              <p className="fd-subject-name">{s.name}</p>
               <button className="fd-delete" onClick={() => handleDelete(s.id)} title="Delete subject">✕</button>
             </div>
-            <p className="fd-subject-name">{s.name}</p>
             <button className="fd-manage" onClick={() => navigate(`/faculty/subjects/${s.id}`)}>
               Manage Notes →
             </button>
@@ -151,14 +145,13 @@ export default function FacultyDashboard() {
         .fd-submit { background: var(--accent); color: #fff; border: none; border-radius: var(--radius-md); padding: 10px 20px; font-size: 13px; font-weight: 600; cursor: pointer; align-self: flex-start; }
         .fd-empty { color: var(--text-muted); font-size: 14px; }
         .fd-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
-        .fd-subject-card { background: var(--bg-surface); border: 1px solid var(--border-subtle); border-top: 3px solid; border-radius: var(--radius-md); padding: 20px; display: flex; flex-direction: column; gap: 10px; transition: border-color 150ms; }
-        .fd-subject-card:hover { border-color: var(--border); }
-        .fd-card-top { display: flex; justify-content: space-between; align-items: center; }
-        .fd-code { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; }
-        .fd-delete { background: none; border: none; cursor: pointer; color: var(--text-muted); font-size: 14px; padding: 2px 6px; border-radius: var(--radius-sm); transition: color 150ms; }
+        .fd-subject-card { background: var(--bg-surface); border: 1px solid var(--border-subtle); border-top: 3px solid var(--accent); border-radius: var(--radius-md); padding: 20px; display: flex; flex-direction: column; gap: 16px; transition: border-color 150ms, transform 150ms; }
+        .fd-subject-card:hover { border-color: var(--border); border-top-color: var(--accent); background: var(--bg-elevated); }
+        .fd-card-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+        .fd-subject-name { font-size: 16px; font-weight: 600; flex: 1; line-height: 1.3; margin: 0; padding-top: 2px; }
+        .fd-delete { background: none; border: none; cursor: pointer; color: var(--text-muted); font-size: 14px; padding: 2px 6px; border-radius: var(--radius-sm); transition: color 150ms; margin-top: -2px; }
         .fd-delete:hover { color: #f87171; }
-        .fd-subject-name { font-size: 15px; font-weight: 600; flex: 1; }
-        .fd-manage { background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 14px; font-size: 13px; font-weight: 500; cursor: pointer; color: var(--text-secondary); transition: all 150ms; }
+        .fd-manage { background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 14px; font-size: 13px; font-weight: 500; cursor: pointer; color: var(--text-secondary); transition: all 150ms; margin-top: auto; }
         .fd-manage:hover { border-color: var(--accent); color: var(--accent); }
       `}</style>
     </div>

@@ -129,9 +129,6 @@ export default function SubjectView() {
         <button className="back-btn" onClick={() => navigate("/student")}>← Back</button>
         {subject && (
           <div className="sv-header-info">
-            <span className="sv-code" style={{ color: subject.color }}>
-              {subject.code}
-            </span>
             <h1 className="sv-title">{subject?.name ?? "Loading…"}</h1>
           </div>
         )}
@@ -215,7 +212,7 @@ export default function SubjectView() {
       {/* Embed bar */}
       {notes.length > 0 && (
         <div className="sv-embed-bar">
-          <div className="sv-embed-text">
+          <div className="sv-embed-text" style={{ display: "flex", alignItems: "center", gap: "12px" }}>
             <span>{selectedIds.size} selected · {embeddedSelected} indexed</span>
             {embedMsg && (
               <span className={`sv-embed-msg ${embedSuccess ? "success" : "error"}`}>

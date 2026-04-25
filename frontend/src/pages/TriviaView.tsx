@@ -51,16 +51,40 @@ export default function TriviaView() {
     setQuestions([]);
   }
 
+  function saveQuiz() {
+    const text = questions.map((q, i) => `Q${i + 1}: ${q.question}\nOptions:\n${q.options.map(opt => `- ${opt}`).join("\n")}\n\nAnswer: ${q.answer}\nExplanation: ${q.explanation}\n`).join("\n---\n\n");
+    const blob = new Blob([text], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `bloom-quiz-${subjectName || 'subject'}-${Date.now()}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   return (
     <div className="page">
       <div className="page-header">
         <button className="back-btn" onClick={() => navigate(`/subject/${subjectId}`)}>← Back</button>
-        <div>
+        <div style={{ flex: 1 }}>
           <div className="trivia-eyebrow section-label">
             Trivia Quiz
           </div>
           <h1 className="trivia-subject-name">{subjectName || `Subject ${subjectId}`}</h1>
         </div>
+        {questions.length > 0 && (
+          <button
+            className="btn btn-ghost"
+            onClick={saveQuiz}
+            title="Save Quiz"
+            style={{ padding: "8px 12px", height: "fit-content" }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 6 }}>
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            Save Quiz
+          </button>
+        )}
       </div>
 
       {/* Start screen */}

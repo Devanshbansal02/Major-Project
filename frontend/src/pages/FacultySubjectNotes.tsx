@@ -214,9 +214,43 @@ export default function FacultySubjectNotes() {
         .fsn-field-row { display: flex; gap: 16px; flex-wrap: wrap; }
         .fsn-field { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 200px; }
         .fsn-label { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; }
-        .fsn-file-input { font-size: 13px; color: var(--text-secondary); }
+        .fsn-file-input {
+          height: 38px;
+          box-sizing: border-box;
+          font-size: 13px;
+          color: var(--text-secondary);
+          background: var(--bg-surface);
+          border: 1px solid var(--border);
+          border-radius: var(--r-sm);
+          display: flex;
+          align-items: center;
+          padding-right: 12px;
+        }
+        .fsn-file-input::file-selector-button {
+          height: 100%;
+          background: var(--bg-elevated);
+          border: none;
+          border-right: 1px solid var(--border);
+          color: var(--text-primary);
+          padding: 0 14px;
+          margin-right: 12px;
+          cursor: pointer;
+          transition: all 150ms;
+        }
+        .fsn-file-input::file-selector-button:hover { background: var(--bg-hover); }
         .fsn-file-hint { font-size: 11px; color: var(--text-muted); }
-        .fsn-date-input { background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 8px 12px; font-size: 13px; color: var(--text-primary); outline: none; transition: border-color 150ms; }
+        .fsn-date-input { 
+          height: 38px;
+          box-sizing: border-box;
+          background: var(--bg-surface); 
+          border: 1px solid var(--border); 
+          border-radius: var(--r-sm); 
+          padding: 0 12px; 
+          font-size: 13px; 
+          color: var(--text-primary); 
+          outline: none; 
+          transition: border-color 150ms; 
+        }
         .fsn-date-input:focus { border-color: var(--accent); }
         .fsn-check-label { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--text-secondary); cursor: pointer; }
         .fsn-check-label input { width: auto; }

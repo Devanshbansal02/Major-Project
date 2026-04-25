@@ -48,7 +48,8 @@ async def get_completion(
     if provider == "openai":
         base_url = "https://api.openai.com/v1"
     elif provider == "ollama":
-        base_url = "http://localhost:11434/v1"
+        from backend.config import OLLAMA_BASE_URL
+        base_url = f"{OLLAMA_BASE_URL}/v1"
         api_key = api_key or "ollama"
     else:
         # custom with openai style

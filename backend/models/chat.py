@@ -14,6 +14,7 @@ class DoubtRequest(BaseModel):
     subject_id: int
     question: str
     provider_config: ProviderConfig
+    note_ids: list[int] = []   # empty = whole subject index
 
 
 class ExplainRequest(BaseModel):
@@ -21,11 +22,13 @@ class ExplainRequest(BaseModel):
     topic: str
     learning_style: str
     provider_config: ProviderConfig
+    note_ids: list[int] = []
 
 
 class TriviaRequest(BaseModel):
     subject_id: int
     provider_config: ProviderConfig
+    note_ids: list[int] = []
 
 
 class TriviaQuestion(BaseModel):

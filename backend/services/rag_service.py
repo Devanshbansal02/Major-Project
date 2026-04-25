@@ -126,8 +126,15 @@ def is_note_embedded(notes_id: int, subject_id: int) -> bool:
 # Query
 # ---------------------------------------------------------------------------
 
-async def query(subject_id: int, question: str, top_k: int = 5) -> list[str]:
-    """Query the vector index for relevant chunks."""
+async def query(subject_id: int, question: str, top_k: int = 5, note_ids: list[int] | None = None) -> list[str]:
+    """Query the vector index for relevant chunks.
+
+    Args:
+        subject_id: ChromaDB collection to query.
+        question: The query text.
+        top_k: Number of chunks to return.
+        note_ids: If provided, restrict results to these note IDs only.
+    """
     client = _get_client()
 
     try:
@@ -142,7 +149,16 @@ async def query(subject_id: int, question: str, top_k: int = 5) -> list[str]:
         logger.error("Query embedding failed: %s", e)
         return []
 
-    results = collection.query(query_embeddings=q_embedding, n_results=top_k)
+    where = {"notes_id": {"$in": note_ids}} if note_ids else None
+
+    try:
+        kwargs: dict = {"query_embeddings": q_embedding, "n_results": top_k}
+        if where:
+            kwargs["where"] = where
+        results = collection.query(**kwargs)
+    except Exception as e:
+        logger.error("ChromaDB query failed: %s", e)
+        return []
 
     documents = results.get("documents", [[]])[0]
     logger.debug("RAG query returned %d chunks for subject_%d", len(documents), subject_id)

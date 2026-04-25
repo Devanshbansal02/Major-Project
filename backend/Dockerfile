@@ -6,7 +6,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     tesseract-ocr-eng \
     && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /app
+WORKDIR /app/backend
 
 # Enable bytecode compilation
 ENV UV_COMPILE_BYTECODE=1
@@ -20,7 +20,9 @@ RUN uv sync --frozen --no-dev
 # Copy project files
 COPY . .
 
+# Set PYTHONPATH so `from backend.main import x` resolves from /app
+ENV PYTHONPATH=/app
+
 EXPOSE 8000
 
-# Fix: Since WORKDIR is /app and we copied the *contents* of backend here, the module is just main
-CMD ["uv", "run", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uv", "run", "uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]

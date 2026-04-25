@@ -1,12 +1,11 @@
+import io
 import logging
 from pathlib import Path
 
 import fitz  # PyMuPDF
-import httpx
 import pytesseract
 from PIL import Image
 from pptx import Presentation
-import io
 
 from backend.config import RAW_DIR, PROCESSED_DIR
 
@@ -14,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
-# Text extraction — pure library calls, no subprocess
+# Text extraction — one function per file type
 # ---------------------------------------------------------------------------
 
 def _pptx_to_text(path: Path) -> str:
@@ -32,9 +31,7 @@ def _pptx_to_text(path: Path) -> str:
 
 def _pdf_typed_to_text(path: Path) -> str:
     doc = fitz.open(str(path))
-    parts = []
-    for page in doc:
-        parts.append(page.get_text())
+    parts = [page.get_text() for page in doc]
     doc.close()
     return "\n".join(parts)
 
@@ -45,150 +42,145 @@ def _pdf_handwritten_to_text(path: Path) -> str:
     for page in doc:
         pix = page.get_pixmap(dpi=300)
         img = Image.open(io.BytesIO(pix.tobytes("png")))
-        text = pytesseract.image_to_string(img)
-        parts.append(text)
+        parts.append(pytesseract.image_to_string(img))
     doc.close()
     return "\n".join(parts)
 
 
+def _docx_to_text(path: Path) -> str:
+    try:
+        from docx import Document as DocxDocument  # python-docx
+    except ImportError:
+        logger.error("python-docx not installed — cannot extract DOCX")
+        return ""
+    doc = DocxDocument(str(path))
+    paragraphs = [p.text.strip() for p in doc.paragraphs if p.text.strip()]
+    # Also pull text from tables
+    for table in doc.tables:
+        for row in table.rows:
+            for cell in row.cells:
+                text = cell.text.strip()
+                if text:
+                    paragraphs.append(text)
+    return "\n".join(paragraphs)
+
+
+def _image_to_text(path: Path) -> str:
+    img = Image.open(str(path))
+    return pytesseract.image_to_string(img)
+
+
 # ---------------------------------------------------------------------------
-# File metadata (used by preview endpoint)
+# File metadata helper
 # ---------------------------------------------------------------------------
 
 def get_file_metadata(path: Path) -> dict:
     ext = path.suffix.lower()
-    meta = {"file_size_bytes": path.stat().st_size, "extension": ext}
-    if ext == ".pdf":
-        doc = fitz.open(str(path))
-        meta["page_count"] = len(doc)
-        meta["word_count"] = sum(len(p.get_text().split()) for p in doc)
-        doc.close()
-    elif ext == ".pptx":
-        prs = Presentation(str(path))
-        meta["slide_count"] = len(prs.slides)
+    meta: dict = {"file_size_bytes": path.stat().st_size, "extension": ext}
+    try:
+        if ext == ".pdf":
+            doc = fitz.open(str(path))
+            meta["page_count"] = len(doc)
+            meta["word_count"] = sum(len(p.get_text().split()) for p in doc)
+            doc.close()
+        elif ext == ".pptx":
+            prs = Presentation(str(path))
+            meta["slide_count"] = len(prs.slides)
+    except Exception as exc:
+        logger.warning("Could not read metadata for %s: %s", path, exc)
     return meta
 
 
 # ---------------------------------------------------------------------------
-# Download helper
+# Core: process a DB note row → extracted text
 # ---------------------------------------------------------------------------
 
-async def _download(url: str, dest: Path) -> None:
-    async with httpx.AsyncClient(timeout=60, follow_redirects=True) as client:
-        r = await client.get(url)
-        r.raise_for_status()
-        dest.write_bytes(r.content)
+async def process_note_file(note: dict) -> tuple[Path | None, str]:
+    """Extract text from an uploaded note.
 
+    Args:
+        note: DB row dict with keys: id, filename, file_type
 
-# ---------------------------------------------------------------------------
-# Single note processing — returns (path, text) or (None, "")
-# ---------------------------------------------------------------------------
-
-async def process_note(note: dict) -> tuple[Path | None, str]:
-    """Download and extract text from a single note.
-
-    Returns (output_path, extracted_text). If already processed, reads
-    from cache. Returns (None, "") on failure.
+    Returns:
+        (output_path, text) — output_path is the cached .txt file.
+        Returns (None, "") on failure.
     """
-    notes_id = note["notes_id"]
-    link: str = note["link"]
-    name: str = note.get("notesname", "").lower()
+    note_id = note["id"]
+    filename = note["filename"]
+    ftype = note["file_type"]
 
-    ext = link.rsplit(".", 1)[-1].lower() if "." in link else "bin"
+    raw_path = Path(RAW_DIR) / filename
+    out_path = Path(PROCESSED_DIR) / f"{note_id}.txt"
 
-    raw_path = Path(RAW_DIR) / f"{notes_id}.{ext}"
-    out_path = Path(PROCESSED_DIR) / f"{notes_id}.txt"
-
-    # Already processed — return cached text
+    # Return cached extraction if available
     if out_path.exists():
         text = out_path.read_text(encoding="utf-8", errors="replace")
         return out_path, text
 
-    # Download
-    try:
-        if not raw_path.exists():
-            await _download(link, raw_path)
-    except Exception as e:
-        logger.error("Download failed for notes_id=%s: %s", notes_id, e)
+    if not raw_path.exists():
+        logger.error("Raw file missing for note_id=%s: %s", note_id, raw_path)
         return None, ""
 
-    # Extract text
     try:
-        if ext == "pptx":
+        if ftype == "pptx":
             text = _pptx_to_text(raw_path)
-        elif ext == "pdf" and "handwritten" in name:
+        elif ftype == "pdf_handwritten":
             text = _pdf_handwritten_to_text(raw_path)
-        elif ext == "pdf":
+        elif ftype == "pdf_typed":
             text = _pdf_typed_to_text(raw_path)
+        elif ftype == "docx":
+            text = _docx_to_text(raw_path)
+        elif ftype == "image":
+            text = _image_to_text(raw_path)
         else:
-            text = f"[Unsupported file type: {ext}]"
+            logger.warning("Unknown file type %s for note_id=%s", ftype, note_id)
+            text = f"[Unsupported file type: {ftype}]"
 
+        out_path.parent.mkdir(parents=True, exist_ok=True)
         out_path.write_text(text, encoding="utf-8")
-    except Exception as e:
-        logger.error("Processing failed for notes_id=%s: %s", notes_id, e, exc_info=True)
+        logger.info("Extracted text for note_id=%s (%d words)", note_id, len(text.split()))
+    except Exception as exc:
+        logger.error("Extraction failed note_id=%s: %s", note_id, exc, exc_info=True)
         return None, ""
 
     return out_path, text
 
 
 # ---------------------------------------------------------------------------
-# Preview — extract text without embedding into RAG
+# Bulk ingestion: extract + embed into ChromaDB, update is_embedded flag
 # ---------------------------------------------------------------------------
 
-async def preview_note(note: dict) -> dict:
-    """Download (if needed), extract text, return preview metadata."""
-    path, text = await process_note(note)
+async def ingest_note_files(notes: list[dict]) -> dict:
+    """Process and embed a list of DB note rows.
 
-    notes_id = note["notes_id"]
-    link: str = note["link"]
-    ext = link.rsplit(".", 1)[-1].lower() if "." in link else "bin"
-    raw_path = Path(RAW_DIR) / f"{notes_id}.{ext}"
-
-    meta = {}
-    if raw_path.exists():
-        meta = get_file_metadata(raw_path)
-
-    meta["notes_id"] = notes_id
-    meta["notesname"] = note.get("notesname", "")
-    meta["text_preview"] = text[:2000] if text else ""
-    meta["word_count"] = len(text.split()) if text else 0
-    meta["is_embedded"] = False  # Will be set by the router using rag_service
-
-    return meta
-
-
-# ---------------------------------------------------------------------------
-# Bulk ingestion — selective by notes_ids
-# ---------------------------------------------------------------------------
-
-async def ingest_notes(notes: list[dict], notes_ids: list[int] | None = None) -> dict:
-    """Process selected notes and embed them into the RAG index.
-
-    Args:
-        notes: Full notes list from the API.
-        notes_ids: If provided, only process these note IDs. Otherwise process all.
-
-    Returns:
-        Summary dict with status and count.
+    Updates the `is_embedded` flag in the DB for each successfully indexed note.
     """
     from backend.services import rag_service
+    from backend.db import get_db
 
-    if notes_ids:
-        id_set = set(notes_ids)
-        notes = [n for n in notes if n["notes_id"] in id_set]
-
-    # Ensure dirs exist
-    Path(RAW_DIR).mkdir(parents=True, exist_ok=True)
     Path(PROCESSED_DIR).mkdir(parents=True, exist_ok=True)
 
-    processed_count = 0
+    processed = 0
     for note in notes:
-        path, text = await process_note(note)
-        if path and text.strip():
-            chunks_added = await rag_service.add_note_to_index(
-                note["subjectId"], note["notes_id"], text
-            )
-            if chunks_added > 0:
-                processed_count += 1
+        note_id = note["id"]
+        subject_id = note["subject_id"]
 
-    return {"status": "done", "notes_processed": processed_count}
+        _, text = await process_note_file(note)
+        if not text.strip():
+            logger.warning("Empty text for note_id=%s — skipping", note_id)
+            continue
+
+        chunks_added = await rag_service.add_note_to_index(subject_id, note_id, text)
+        if chunks_added > 0:
+            processed += 1
+            # Mark as embedded in DB
+            try:
+                db = await get_db()
+                await db.execute("UPDATE notes SET is_embedded = 1 WHERE id = ?", (note_id,))
+                await db.commit()
+                await db.close()
+            except Exception as exc:
+                logger.error("Failed to update is_embedded for note_id=%s: %s", note_id, exc)
+
+    logger.info("Ingestion complete: %d/%d notes embedded", processed, len(notes))
+    return {"status": "done", "processed": processed, "total": len(notes)}

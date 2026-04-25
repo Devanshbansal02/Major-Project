@@ -11,8 +11,8 @@ Write-Host ""
 # Install uv if not available
 if (-not (Get-Command uv -ErrorAction SilentlyContinue)) {
     Write-Host "  uv not found. Installing uv..." -ForegroundColor Yellow
-    irm https://astral.sh/uv/install.ps1 | iex
-    $env:Path += ";$HOME\.cargo\bin"
+    powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+    $env:Path += ";$HOME\.local\bin;$HOME\.cargo\bin"
 }
 
 Write-Host "  Downloading backend dependencies using uv..." -ForegroundColor Yellow

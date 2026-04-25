@@ -18,11 +18,16 @@ export default function Dashboard() {
     const apiKey = getApiKey();
     const configured = !needsKey || (apiKey.trim() !== "" && model.trim() !== "");
     if (!configured) {
-      setShowToast(true);
-      const timer = setTimeout(() => setShowToast(false), 6000);
+      const timer = setTimeout(() => setShowToast(true), 800);
       return () => clearTimeout(timer);
     }
   }, [provider, model, getApiKey]);
+
+  useEffect(() => {
+    if (!showToast) return;
+    const timer = setTimeout(() => setShowToast(false), 6000);
+    return () => clearTimeout(timer);
+  }, [showToast]);
 
   useEffect(() => {
     getSubjects()
@@ -35,125 +40,245 @@ export default function Dashboard() {
 
   return (
     <div className="page">
-      <div className="dashboard-header">
-        <div>
-          <h1 className="dashboard-title">Bloom</h1>
-          <p className="dashboard-subtitle">Your AI-powered revision partner</p>
+      {/* Header */}
+      <header className="dash-header">
+        <div className="dash-wordmark">
+          <span className="dash-wordmark-bloom">Bloom</span>
+          <span className="dash-wordmark-dot" />
         </div>
-        <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-          <button className="icon-btn" style={{ width: "auto", padding: "0 14px", fontSize: "13px" }} onClick={() => navigate("/home")}>
-            Switch Role
+
+        <div className="dash-header-actions">
+          <button
+            className="dash-role-btn"
+            onClick={() => navigate("/home")}
+          >
+            Switch role
           </button>
-          <button className="icon-btn" onClick={() => navigate("/settings")} title="Settings">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <button
+            className="dash-settings-btn"
+            onClick={() => navigate("/settings")}
+            title="Settings"
+            aria-label="Settings"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="3" />
-              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l-.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
             </svg>
           </button>
         </div>
+      </header>
+
+      {/* Eyebrow */}
+      <div className="dash-eyebrow">
+        <span className="section-label">Your subjects</span>
+        {!loading && subjects.length > 0 && (
+          <span className="dash-count">{subjects.length} enrolled</span>
+        )}
       </div>
 
-      {loading && <p style={{ color: "var(--text-muted)", fontSize: "14px" }}>Loading subjects…</p>}
+      {/* States */}
+      {loading && (
+        <div className="dash-loading">
+          {[0,1,2,3,4,5].map(i => (
+            <div key={i} className="dash-skeleton" style={{ animationDelay: `${i * 80}ms` }} />
+          ))}
+        </div>
+      )}
+
       {!loading && subjects.length === 0 && (
-        <p style={{ color: "var(--text-muted)", fontSize: "14px" }}>
-          No subjects yet. Wait for your faculty to add subjects and upload notes.
+        <p className="dash-empty">
+          No subjects configured yet. Ask your faculty to set up the course.
         </p>
       )}
 
-      <div className="subject-grid">
-        {subjects.map((subject) => (
-          <SubjectCard key={subject.id} subject={subject} />
-        ))}
-      </div>
+      {!loading && subjects.length > 0 && (
+        <div className="subject-grid">
+          {subjects.map((subject, i) => (
+            <SubjectCard key={subject.id} subject={subject} index={i} />
+          ))}
+        </div>
+      )}
 
-      {/* Toast: unconfigured provider */}
-      <div className={`toast ${showToast ? "toast-visible" : ""}`}>
-        <span>⚙️ LLM provider not configured.</span>
-        <button className="toast-link" onClick={() => { setShowToast(false); navigate("/settings"); }}>
-          Go to Settings →
+      {/* Toast */}
+      <div className={`dash-toast ${showToast ? "visible" : ""}`} role="status">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        <span>LLM provider not configured.</span>
+        <button
+          className="dash-toast-link"
+          onClick={() => { setShowToast(false); navigate("/settings"); }}
+        >
+          Open Settings
         </button>
       </div>
 
       <style>{`
-        .dashboard-header {
+        .dash-header {
           display: flex;
-          align-items: flex-start;
+          align-items: center;
           justify-content: space-between;
-          margin-bottom: 36px;
+          margin-bottom: 48px;
         }
-        .dashboard-title {
-          font-size: 32px;
-          font-weight: 700;
-          background: linear-gradient(135deg, #e8e8f0, #8888aa);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          background-clip: text;
+
+        .dash-wordmark {
+          display: flex;
+          align-items: center;
+          gap: 6px;
         }
-        .dashboard-subtitle {
-          font-size: 14px;
+
+        .dash-wordmark-bloom {
+          font-family: var(--font-display);
+          font-size: 26px;
+          color: var(--text-primary);
+          letter-spacing: -0.02em;
+          line-height: 1;
+        }
+
+        .dash-wordmark-dot {
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+          background: var(--accent);
+          margin-bottom: 2px;
+          flex-shrink: 0;
+        }
+
+        .dash-header-actions {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .dash-role-btn {
+          padding: 7px 14px;
+          border: 1px solid var(--border);
+          border-radius: var(--r-sm);
+          font-size: 13px;
+          font-weight: 500;
           color: var(--text-muted);
-          margin-top: 4px;
+          font-family: var(--font-body);
+          transition: color 150ms, border-color 150ms, transform 120ms;
         }
-        .icon-btn {
+
+        .dash-role-btn:hover {
+          color: var(--text-primary);
+          border-color: var(--border-strong);
+        }
+
+        .dash-role-btn:active { transform: scale(0.97); }
+
+        .dash-settings-btn {
+          width: 34px;
+          height: 34px;
           display: flex;
           align-items: center;
           justify-content: center;
-          width: 40px;
-          height: 40px;
-          border-radius: var(--radius-sm);
-          background: var(--bg-elevated);
           border: 1px solid var(--border);
-          color: var(--text-secondary);
-          transition: all 150ms ease;
+          border-radius: var(--r-sm);
+          color: var(--text-muted);
+          transition: color 150ms, border-color 150ms, transform 120ms;
         }
-        .icon-btn:hover {
+
+        .dash-settings-btn:hover {
           color: var(--text-primary);
-          border-color: var(--accent);
+          border-color: var(--border-strong);
         }
+
+        .dash-settings-btn:active { transform: scale(0.95); }
+
+        .dash-eyebrow {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: 16px;
+        }
+
+        .dash-count {
+          font-size: 11px;
+          color: var(--text-muted);
+          font-family: var(--font-mono);
+        }
+
         .subject-grid {
           display: grid;
           grid-template-columns: repeat(3, 1fr);
-          gap: 18px;
+          gap: 12px;
         }
-        @media (max-width: 800px) {
+
+        @media (max-width: 820px) {
           .subject-grid { grid-template-columns: repeat(2, 1fr); }
         }
-        .toast {
+
+        @media (max-width: 520px) {
+          .subject-grid { grid-template-columns: 1fr; }
+          .page { padding: 28px 20px; }
+        }
+
+        /* Loading skeletons */
+        .dash-loading {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 12px;
+        }
+
+        .dash-skeleton {
+          height: 130px;
+          border-radius: var(--r-md);
+          background: var(--bg-surface);
+          border: 1px solid var(--border-subtle);
+          animation: skeletonPulse 1.6s ease-in-out infinite both;
+        }
+
+        @keyframes skeletonPulse {
+          0%, 100% { opacity: 0.4; }
+          50%       { opacity: 0.7; }
+        }
+
+        .dash-empty {
+          color: var(--text-muted);
+          font-size: 14px;
+          margin-top: 8px;
+        }
+
+        /* Toast */
+        .dash-toast {
           position: fixed;
           bottom: 28px;
           left: 50%;
-          transform: translateX(-50%) translateY(80px);
-          background: var(--bg-elevated);
-          border: 1px solid var(--accent);
-          border-radius: var(--radius-md);
-          padding: 12px 20px;
+          transform: translateX(-50%) translateY(calc(100% + 28px));
           display: flex;
           align-items: center;
-          gap: 14px;
+          gap: 10px;
+          padding: 11px 18px;
+          background: var(--bg-elevated);
+          border: 1px solid var(--border);
+          border-radius: var(--r-md);
           font-size: 13px;
-          color: var(--text-primary);
-          box-shadow: 0 8px 32px rgba(0,0,0,0.3);
-          opacity: 0;
-          transition: transform 350ms cubic-bezier(0.22,1,0.36,1), opacity 350ms ease;
-          pointer-events: none;
-          z-index: 100;
+          color: var(--text-secondary);
           white-space: nowrap;
+          pointer-events: none;
+          opacity: 0;
+          transition: transform 320ms var(--ease-out), opacity 320ms;
+          z-index: 200;
         }
-        .toast.toast-visible {
-          opacity: 1;
+
+        .dash-toast.visible {
           transform: translateX(-50%) translateY(0);
+          opacity: 1;
           pointer-events: auto;
         }
-        .toast-link {
-          background: none;
-          border: none;
-          color: var(--accent-hover);
-          font-weight: 600;
+
+        .dash-toast svg { color: var(--warning); flex-shrink: 0; }
+
+        .dash-toast-link {
           font-size: 13px;
-          cursor: pointer;
-          padding: 0;
+          font-weight: 600;
+          color: var(--accent-hover);
+          font-family: var(--font-body);
           text-decoration: underline;
           text-underline-offset: 2px;
+          padding: 0;
         }
       `}</style>
     </div>

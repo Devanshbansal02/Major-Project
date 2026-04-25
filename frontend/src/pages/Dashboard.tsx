@@ -129,10 +129,12 @@ export default function Dashboard() {
 
         .dash-wordmark-bloom {
           font-family: var(--font-display);
-          font-size: 26px;
+          font-size: 28px;
           color: var(--text-primary);
           letter-spacing: -0.02em;
           line-height: 1;
+          font-style: italic;
+          text-shadow: 0 2px 10px rgba(255,255,255,0.05);
         }
 
         .dash-wordmark-dot {
@@ -158,7 +160,7 @@ export default function Dashboard() {
           font-weight: 500;
           color: var(--text-muted);
           font-family: var(--font-body);
-          transition: color 150ms, border-color 150ms, transform 120ms;
+          transition: color 150ms var(--ease-out), border-color 150ms var(--ease-out), transform 120ms var(--ease-out), filter 150ms;
         }
 
         .dash-role-btn:hover {
@@ -177,7 +179,7 @@ export default function Dashboard() {
           border: 1px solid var(--border);
           border-radius: var(--r-sm);
           color: var(--text-muted);
-          transition: color 150ms, border-color 150ms, transform 120ms;
+          transition: color 150ms var(--ease-out), border-color 150ms var(--ease-out), transform 120ms var(--ease-out);
         }
 
         .dash-settings-btn:hover {

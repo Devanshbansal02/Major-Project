@@ -1,4 +1,4 @@
-# Bloom — Dev Server Launcher
+# Bloom: Dev Server Launcher
 # Starts the project using Docker Compose.
 
 $Root = $PSScriptRoot

@@ -1,5 +1,4 @@
 import logging
-import os
 import uuid
 from pathlib import Path
 
@@ -38,8 +37,9 @@ async def _assert_owns_subject(subject_id: int, faculty_id: int, db) -> None:
 
 
 # ---------------------------------------------------------------------------
-# List notes for a subject (faculty view — same data as student but protected)
+# List notes for a subject (faculty view: same data as student but protected)
 # ---------------------------------------------------------------------------
+
 
 @router.get("/faculty/subjects/{subject_id}/notes")
 async def list_notes(subject_id: int, faculty_id: int = Depends(require_faculty)):
@@ -62,17 +62,21 @@ async def list_notes(subject_id: int, faculty_id: int = Depends(require_faculty)
 # Upload a note
 # ---------------------------------------------------------------------------
 
+
 @router.post("/faculty/subjects/{subject_id}/notes", status_code=201)
 async def upload_note(
     subject_id: int,
     file: UploadFile = File(...),
-    class_date: str = Form(...),          # YYYY-MM-DD
+    class_date: str = Form(...),  # YYYY-MM-DD
     is_handwritten: bool = Form(False),
     faculty_id: int = Depends(require_faculty),
 ):
     ext = Path(file.filename or "").suffix.lower()
     if ext not in ALLOWED_EXTENSIONS:
-        raise HTTPException(400, f"File type '{ext}' not allowed. Allowed: {', '.join(ALLOWED_EXTENSIONS)}")
+        raise HTTPException(
+            400,
+            f"File type '{ext}' not allowed. Allowed: {', '.join(ALLOWED_EXTENSIONS)}",
+        )
 
     content = await file.read()
     if len(content) > MAX_FILE_SIZE:
@@ -98,7 +102,11 @@ async def upload_note(
         note_id = cur.lastrowid
         logger.info(
             "Uploaded note id=%d subject=%d type=%s date=%s size=%d",
-            note_id, subject_id, ftype, class_date, len(content),
+            note_id,
+            subject_id,
+            ftype,
+            class_date,
+            len(content),
         )
         return {
             "id": note_id,
@@ -114,6 +122,7 @@ async def upload_note(
 # ---------------------------------------------------------------------------
 # Delete a note
 # ---------------------------------------------------------------------------
+
 
 @router.delete("/faculty/subjects/{subject_id}/notes/{note_id}")
 async def delete_note(

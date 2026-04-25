@@ -9,7 +9,7 @@ type Provider = ProviderConfig["provider"];
 
 interface SettingsStore {
   provider: Provider;
-  // Per-provider API key storage — keys never overwrite each other
+  // Per-provider API key storage: keys never overwrite each other
   apiKeys: Record<Provider, string>;
   baseUrl: string;
   model: string;
@@ -22,7 +22,7 @@ interface SettingsStore {
   setCustomStyle: (s: ProviderConfig["customStyle"]) => void;
   setLearningStyle: (s: string) => void;
   resetLearningStyle: () => void;
-  // Convenience getter — returns key for active provider
+  // Convenience getter: returns key for active provider
   getApiKey: () => string;
 }
 

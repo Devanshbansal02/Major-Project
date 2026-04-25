@@ -2,10 +2,10 @@ import logging
 from pathlib import Path
 
 import chromadb
-from chromadb.config import Settings as ChromaSettings
 import httpx
+from chromadb.config import Settings as ChromaSettings
 
-from backend.config import INDEX_DIR, OLLAMA_BASE_URL, EMBEDDING_MODEL
+from backend.config import EMBEDDING_MODEL, INDEX_DIR, OLLAMA_BASE_URL
 
 logger = logging.getLogger(__name__)
 
@@ -27,8 +27,9 @@ def _get_client() -> chromadb.ClientAPI:
 
 
 # ---------------------------------------------------------------------------
-# Embedding via Ollama — no PyTorch, no local model loading
+# Embedding via Ollama: no PyTorch, no local model loading
 # ---------------------------------------------------------------------------
+
 
 async def _embed(texts: list[str]) -> list[list[float]]:
     """Get embeddings from Ollama. Falls back to /api/embeddings for older versions."""
@@ -37,14 +38,14 @@ async def _embed(texts: list[str]) -> list[list[float]]:
 
     async with httpx.AsyncClient(timeout=120) as client:
         for i in range(0, len(texts), BATCH_SIZE):
-            batch_texts = texts[i:i + BATCH_SIZE]
-            
+            batch_texts = texts[i : i + BATCH_SIZE]
+
             # Try new batch endpoint first
             resp = await client.post(
                 f"{OLLAMA_BASE_URL}/api/embed",
                 json={"model": EMBEDDING_MODEL, "input": batch_texts},
             )
-            
+
             if resp.status_code != 404:
                 resp.raise_for_status()
                 all_embeddings.extend(resp.json()["embeddings"])
@@ -52,8 +53,10 @@ async def _embed(texts: list[str]) -> list[list[float]]:
 
             # Fallback to older /api/embeddings endpoint (one at a time)
             if i == 0:
-                logger.warning("/api/embed returned 404. Falling back to /api/embeddings (older Ollama version).")
-            
+                logger.warning(
+                    "/api/embed returned 404. Falling back to /api/embeddings (older Ollama version)."
+                )
+
             for text in batch_texts:
                 resp = await client.post(
                     f"{OLLAMA_BASE_URL}/api/embeddings",
@@ -61,7 +64,7 @@ async def _embed(texts: list[str]) -> list[list[float]]:
                 )
                 resp.raise_for_status()
                 all_embeddings.append(resp.json()["embedding"])
-                
+
     return all_embeddings
 
 
@@ -72,22 +75,24 @@ async def _embed(texts: list[str]) -> list[list[float]]:
 # Bump this whenever chunk_size / overlap change so stale embeddings are re-indexed.
 CHUNK_VERSION = 2
 
-# ~500 tokens (4 chars/token) with ~50-token overlap — hard ceiling ≈ 1 000 tokens.
+# ~500 tokens (4 chars/token) with ~50-token overlap: hard ceiling ≈ 1 000 tokens.
 _CHUNK_SIZE = 2000
 _CHUNK_OVERLAP = 200
 
 
-def _chunk_text_stream(text: str, chunk_size: int = _CHUNK_SIZE, overlap: int = _CHUNK_OVERLAP):
+def _chunk_text_stream(
+    text: str, chunk_size: int = _CHUNK_SIZE, overlap: int = _CHUNK_OVERLAP
+):
     """Yield overlapping character-based chunks without building the full list in memory.
 
-    Never single-passes the whole document — each yield gives one ready-to-embed chunk.
+    Never single-passes the whole document: each yield gives one ready-to-embed chunk.
     Approx 4 chars per token → chunk_size=2000 ≈ 500 tokens; well under any model's
     context window even after the query string is prepended.
     """
     start = 0
     text_len = len(text)
     while start < text_len:
-        chunk = text[start:start + chunk_size].strip()
+        chunk = text[start : start + chunk_size].strip()
         if chunk:
             yield chunk
         start += chunk_size - overlap
@@ -97,10 +102,11 @@ def _chunk_text_stream(text: str, chunk_size: int = _CHUNK_SIZE, overlap: int = 
 # Index operations
 # ---------------------------------------------------------------------------
 
+
 async def add_note_to_index(subject_id: int, notes_id: int, text: str) -> int:
     """Chunk text incrementally, embed via Ollama, and upsert into ChromaDB.
 
-    Never single-passes the whole document — chunks are streamed and embedded
+    Never single-passes the whole document: chunks are streamed and embedded
     in small batches so memory usage stays bounded regardless of document size.
     """
     client = _get_client()
@@ -125,14 +131,25 @@ async def add_note_to_index(subject_id: int, notes_id: int, text: str) -> int:
         try:
             embeddings = await _embed(chunks)
         except Exception as e:
-            logger.error("Embedding failed for notes_id=%d chunk_batch starting at %d: %s", notes_id, start_i, e)
+            logger.error(
+                "Embedding failed for notes_id=%d chunk_batch starting at %d: %s",
+                notes_id,
+                start_i,
+                e,
+            )
             return
         ids = [f"{notes_id}_chunk_{start_i + j}" for j in range(len(chunks))]
         metadatas = [
-            {"notes_id": notes_id, "chunk_index": start_i + j, "chunk_version": CHUNK_VERSION}
+            {
+                "notes_id": notes_id,
+                "chunk_index": start_i + j,
+                "chunk_version": CHUNK_VERSION,
+            }
             for j in range(len(chunks))
         ]
-        collection.upsert(ids=ids, embeddings=embeddings, documents=chunks, metadatas=metadatas)
+        collection.upsert(
+            ids=ids, embeddings=embeddings, documents=chunks, metadatas=metadatas
+        )
         total += len(chunks)
 
     for chunk in _chunk_text_stream(text):
@@ -145,8 +162,13 @@ async def add_note_to_index(subject_id: int, notes_id: int, text: str) -> int:
     if batch_chunks:
         await _flush(batch_chunks, batch_start_idx)
 
-    logger.info("Indexed %d chunks for notes_id=%d into subject_%d (chunk_version=%d)",
-                total, notes_id, subject_id, CHUNK_VERSION)
+    logger.info(
+        "Indexed %d chunks for notes_id=%d into subject_%d (chunk_version=%d)",
+        total,
+        notes_id,
+        subject_id,
+        CHUNK_VERSION,
+    )
     return total
 
 
@@ -164,7 +186,7 @@ def remove_note_from_index(subject_id: int, notes_id: int) -> None:
 def is_note_embedded(notes_id: int, subject_id: int) -> bool:
     """Return True only if the note is indexed at the current CHUNK_VERSION.
 
-    A version mismatch means the chunking params changed — the note must be
+    A version mismatch means the chunking params changed: the note must be
     re-indexed so callers should treat it as not embedded.
     """
     client = _get_client()
@@ -187,7 +209,10 @@ def is_note_embedded(notes_id: int, subject_id: int) -> bool:
 # Query
 # ---------------------------------------------------------------------------
 
-async def query(subject_id: int, question: str, top_k: int = 17, note_ids: list[int] | None = None) -> list[str]:
+
+async def query(
+    subject_id: int, question: str, top_k: int = 17, note_ids: list[int] | None = None
+) -> list[str]:
     """Query the vector index for relevant chunks.
 
     Args:
@@ -225,13 +250,16 @@ async def query(subject_id: int, question: str, top_k: int = 17, note_ids: list[
         return []
 
     documents = results.get("documents", [[]])[0]
-    logger.debug("RAG query returned %d chunks for subject_%d", len(documents), subject_id)
+    logger.debug(
+        "RAG query returned %d chunks for subject_%d", len(documents), subject_id
+    )
     return documents
 
 
 # ---------------------------------------------------------------------------
 # Stats
 # ---------------------------------------------------------------------------
+
 
 def get_index_stats() -> dict:
     """Return stats for all indexed collections."""

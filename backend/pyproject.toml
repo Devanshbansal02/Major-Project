@@ -1,7 +1,7 @@
 [project]
 name = "backend"
 version = "0.1.0"
-description = "Bloom backend — Faculty portal + Student RAG dashboard"
+description = "Bloom backend: Faculty portal + Student RAG dashboard"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [

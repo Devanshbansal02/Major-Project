@@ -46,7 +46,7 @@ def _chunks_to_context(chunks: list[str]) -> str:
 @router.post("/chat/doubt")
 async def chat_doubt(req: DoubtRequest):
     logger.info("Doubt request: subject_id=%d provider=%s model=%s", req.subject_id, req.provider_config.provider, req.provider_config.model)
-    chunks = await rag_service.query(req.subject_id, req.question, note_ids=req.note_ids or None)
+    chunks = await rag_service.query(req.subject_id, req.question, note_ids=req.note_ids)
     logger.debug("RAG returned %d chunks for doubt query", len(chunks))
     context = _chunks_to_context(chunks)
     prompt = DOUBT_PROMPT.format(context=context, question=req.question)
@@ -71,7 +71,7 @@ async def chat_doubt(req: DoubtRequest):
 @router.post("/chat/explain")
 async def chat_explain(req: ExplainRequest):
     logger.info("Explain request: subject_id=%d topic=%r provider=%s model=%s", req.subject_id, req.topic, req.provider_config.provider, req.provider_config.model)
-    chunks = await rag_service.query(req.subject_id, req.topic, note_ids=req.note_ids or None)
+    chunks = await rag_service.query(req.subject_id, req.topic, note_ids=req.note_ids)
     logger.debug("RAG returned %d chunks for explain query", len(chunks))
     context = _chunks_to_context(chunks)
     prompt = EXPLAIN_PROMPT.format(
@@ -100,7 +100,7 @@ async def chat_explain(req: ExplainRequest):
 @router.post("/chat/trivia")
 async def chat_trivia(req: TriviaRequest):
     logger.info("Trivia request: subject_id=%d provider=%s model=%s", req.subject_id, req.provider_config.provider, req.provider_config.model)
-    chunks = await rag_service.query(req.subject_id, "general overview concepts", top_k=10, note_ids=req.note_ids or None)
+    chunks = await rag_service.query(req.subject_id, "general overview concepts", note_ids=req.note_ids)
     logger.debug("RAG returned %d chunks for trivia", len(chunks))
     context = _chunks_to_context(chunks)
     prompt = TRIVIA_PROMPT.format(context=context)

@@ -1,20 +1,49 @@
 import io
 import logging
+import re
 from pathlib import Path
 
 import fitz  # PyMuPDF
 import pytesseract
-from PIL import Image
+from PIL import Image, ImageEnhance
 from pptx import Presentation
 
-from backend.config import RAW_DIR, PROCESSED_DIR
+from backend.config import PROCESSED_DIR, RAW_DIR
 
 logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
-# Text extraction — one function per file type
+# Text Preprocessing & Extraction
 # ---------------------------------------------------------------------------
+
+
+def _clean_extracted_text(text: str) -> str:
+    """Clean up raw extracted text (especially from OCR) before embedding."""
+    if not text:
+        return ""
+
+    # Normalize carriage returns
+    text = text.replace("\r\n", "\n").replace("\r", "\n")
+
+    lines = []
+    for line in text.split("\n"):
+        line = line.strip()
+        # Remove purely non-alphanumeric/noise lines (e.g., '---', '• • •', etc.)
+        # Keep lines that have at least some word characters
+        if line and re.search(r"\w", line):
+            # Normalize multiple spaces inside the line
+            line = re.sub(r"[ \t]+", " ", line)
+            lines.append(line)
+
+    # Re-join lines. We use double newline to preserve paragraph semantics for chunking.
+    cleaned = "\n\n".join(lines)
+
+    # Remove instances of 3 or more consecutive newlines
+    cleaned = re.sub(r"\n{3,}", "\n\n", cleaned)
+
+    return cleaned.strip()
+
 
 def _pptx_to_text(path: Path) -> str:
     prs = Presentation(str(path))
@@ -36,12 +65,22 @@ def _pdf_typed_to_text(path: Path) -> str:
     return "\n".join(parts)
 
 
+def _preprocess_image(img: Image.Image) -> Image.Image:
+    # Convert to grayscale
+    img = img.convert("L")
+    # Increase contrast
+    enhancer = ImageEnhance.Contrast(img)
+    img = enhancer.enhance(2.0)
+    return img
+
+
 def _pdf_handwritten_to_text(path: Path) -> str:
     doc = fitz.open(str(path))
     parts = []
     for page in doc:
         pix = page.get_pixmap(dpi=300)
         img = Image.open(io.BytesIO(pix.tobytes("png")))
+        img = _preprocess_image(img)
         parts.append(pytesseract.image_to_string(img))
     doc.close()
     return "\n".join(parts)
@@ -51,7 +90,7 @@ def _docx_to_text(path: Path) -> str:
     try:
         from docx import Document as DocxDocument  # python-docx
     except ImportError:
-        logger.error("python-docx not installed — cannot extract DOCX")
+        logger.error("python-docx not installed: cannot extract DOCX")
         return ""
     doc = DocxDocument(str(path))
     paragraphs = [p.text.strip() for p in doc.paragraphs if p.text.strip()]
@@ -67,12 +106,14 @@ def _docx_to_text(path: Path) -> str:
 
 def _image_to_text(path: Path) -> str:
     img = Image.open(str(path))
+    img = _preprocess_image(img)
     return pytesseract.image_to_string(img)
 
 
 # ---------------------------------------------------------------------------
 # File metadata helper
 # ---------------------------------------------------------------------------
+
 
 def get_file_metadata(path: Path) -> dict:
     ext = path.suffix.lower()
@@ -95,6 +136,7 @@ def get_file_metadata(path: Path) -> dict:
 # Core: process a DB note row → extracted text
 # ---------------------------------------------------------------------------
 
+
 async def process_note_file(note: dict) -> tuple[Path | None, str]:
     """Extract text from an uploaded note.
 
@@ -102,7 +144,7 @@ async def process_note_file(note: dict) -> tuple[Path | None, str]:
         note: DB row dict with keys: id, filename, file_type
 
     Returns:
-        (output_path, text) — output_path is the cached .txt file.
+        (output_path, text): output_path is the cached .txt file.
         Returns (None, "") on failure.
     """
     note_id = note["id"]
@@ -136,9 +178,16 @@ async def process_note_file(note: dict) -> tuple[Path | None, str]:
             logger.warning("Unknown file type %s for note_id=%s", ftype, note_id)
             text = f"[Unsupported file type: {ftype}]"
 
+        # Apply cleaning preprocessing
+        text = _clean_extracted_text(text)
+
         out_path.parent.mkdir(parents=True, exist_ok=True)
         out_path.write_text(text, encoding="utf-8")
-        logger.info("Extracted text for note_id=%s (%d words)", note_id, len(text.split()))
+        logger.info(
+            "Extracted & cleaned text for note_id=%s (%d words)",
+            note_id,
+            len(text.split()),
+        )
     except Exception as exc:
         logger.error("Extraction failed note_id=%s: %s", note_id, exc, exc_info=True)
         return None, ""
@@ -150,13 +199,14 @@ async def process_note_file(note: dict) -> tuple[Path | None, str]:
 # Bulk ingestion: extract + embed into ChromaDB, update is_embedded flag
 # ---------------------------------------------------------------------------
 
+
 async def ingest_note_files(notes: list[dict]) -> dict:
     """Process and embed a list of DB note rows.
 
     Updates the `is_embedded` flag in the DB for each successfully indexed note.
     """
-    from backend.services import rag_service
     from backend.db import get_db
+    from backend.services import rag_service
 
     Path(PROCESSED_DIR).mkdir(parents=True, exist_ok=True)
 
@@ -167,7 +217,7 @@ async def ingest_note_files(notes: list[dict]) -> dict:
 
         _, text = await process_note_file(note)
         if not text.strip():
-            logger.warning("Empty text for note_id=%s — skipping", note_id)
+            logger.warning("Empty text for note_id=%s: skipping", note_id)
             continue
 
         chunks_added = await rag_service.add_note_to_index(subject_id, note_id, text)
@@ -176,11 +226,15 @@ async def ingest_note_files(notes: list[dict]) -> dict:
             # Mark as embedded in DB
             try:
                 db = await get_db()
-                await db.execute("UPDATE notes SET is_embedded = 1 WHERE id = ?", (note_id,))
+                await db.execute(
+                    "UPDATE notes SET is_embedded = 1 WHERE id = ?", (note_id,)
+                )
                 await db.commit()
                 await db.close()
             except Exception as exc:
-                logger.error("Failed to update is_embedded for note_id=%s: %s", note_id, exc)
+                logger.error(
+                    "Failed to update is_embedded for note_id=%s: %s", note_id, exc
+                )
 
     logger.info("Ingestion complete: %d/%d notes embedded", processed, len(notes))
     return {"status": "done", "processed": processed, "total": len(notes)}

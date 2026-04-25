@@ -3,19 +3,19 @@ import { useNavigate, useParams } from "react-router-dom";
 import { getNotes, triggerIngest, type NoteInfo } from "../api/client";
 
 const FILE_TYPE_LABELS: Record<string, string> = {
-  pdf_typed:       "PDF",
+  pdf_typed: "PDF",
   pdf_handwritten: "PDF·HW",
-  pptx:            "PPTX",
-  docx:            "DOCX",
-  image:           "IMG",
+  pptx: "PPTX",
+  docx: "DOCX",
+  image: "IMG",
 };
 
 const FILE_TYPE_COLORS: Record<string, string> = {
-  pdf_typed:       "#f43f5e",
+  pdf_typed: "#f43f5e",
   pdf_handwritten: "#f59e0b",
-  pptx:            "#f97316",
-  docx:            "#3b82f6",
-  image:           "#22c55e",
+  pptx: "#f97316",
+  docx: "#3b82f6",
+  image: "#22c55e",
 };
 
 interface SubjectMeta { id: number; name: string; code: string; color: string; }
@@ -108,7 +108,7 @@ export default function SubjectView() {
         } else if (Date.now() < deadline) {
           setTimeout(poll, 3000);
         } else {
-          setEmbedMsg("Taking longer than expected — check backend logs.");
+          setEmbedMsg("Taking longer than expected: check backend logs.");
           setEmbedding(false);
         }
       };
@@ -192,7 +192,7 @@ export default function SubjectView() {
                   <div className={`sv-checkbox ${selected ? "checked" : ""}`}>
                     {selected && (
                       <svg width="9" height="7" viewBox="0 0 9 7" fill="none">
-                        <path d="M1 3.5L3.5 6L8 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                        <path d="M1 3.5L3.5 6L8 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                       </svg>
                     )}
                   </div>
@@ -256,7 +256,7 @@ export default function SubjectView() {
           onClick={() => navigate(`/subject/${subjectId}/chat?mode=doubt`, { state: { noteIds: selectedList } })}
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+            <circle cx="12" cy="12" r="10" /><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" /><line x1="12" y1="17" x2="12.01" y2="17" />
           </svg>
           Ask a Doubt
         </button>
@@ -266,7 +266,7 @@ export default function SubjectView() {
           onClick={() => navigate(`/subject/${subjectId}/chat?mode=explain`, { state: { noteIds: selectedList } })}
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+            <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" /><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
           </svg>
           Explain Again
         </button>
@@ -276,7 +276,7 @@ export default function SubjectView() {
           onClick={() => navigate(`/subject/${subjectId}/trivia`, { state: { noteIds: selectedList } })}
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+            <polyline points="9 11 12 14 22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
           </svg>
           Take Trivia
         </button>
@@ -319,10 +319,11 @@ export default function SubjectView() {
           background: var(--bg-surface);
           border: 1px solid var(--border-subtle);
           border-radius: var(--r-sm);
-          transition: background 140ms, border-color 140ms;
+          transition: background 200ms var(--ease-out), border-color 200ms var(--ease-out), transform 150ms var(--ease-out);
           animation: fadeUp 240ms var(--ease-out) both;
         }
         .sv-note-row:hover { background: var(--bg-elevated); }
+        .sv-note-row:active { transform: scale(0.98); }
         .sv-note-row.selected {
           border-color: rgba(99,102,241,0.3);
           background: var(--accent-dim);
@@ -374,7 +375,7 @@ export default function SubjectView() {
           color: var(--text-secondary);
           font-size: 12.5px; font-weight: 600;
           font-family: var(--font-body);
-          transition: background 150ms, color 150ms, border-color 150ms, transform 100ms;
+          transition: background 150ms var(--ease-out), color 150ms var(--ease-out), border-color 150ms var(--ease-out), transform 100ms;
           white-space: nowrap;
         }
         .sv-embed-btn:not(:disabled):hover { background: var(--accent); border-color: var(--accent); color: #fff; }

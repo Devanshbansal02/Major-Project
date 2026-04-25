@@ -149,7 +149,7 @@ export default function FacultySubjectNotes() {
                 onChange={e => setFile(e.target.files?.[0] ?? null)}
                 required
               />
-              <p className="fsn-file-hint">PDF, PPTX, DOCX, PNG, JPG, WEBP — max 100 MB</p>
+              <p className="fsn-file-hint">PDF, PPTX, DOCX, PNG, JPG, WEBP: max 100 MB</p>
             </div>
 
             <div className="fsn-field">

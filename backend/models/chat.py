@@ -14,7 +14,7 @@ class DoubtRequest(BaseModel):
     subject_id: int
     question: str
     provider_config: ProviderConfig
-    note_ids: list[int] = []   # empty = whole subject index
+    note_ids: list[int] | None = None   # None = whole subject index, [] = no notes
 
 
 class ExplainRequest(BaseModel):
@@ -22,13 +22,13 @@ class ExplainRequest(BaseModel):
     topic: str
     learning_style: str
     provider_config: ProviderConfig
-    note_ids: list[int] = []
+    note_ids: list[int] | None = None
 
 
 class TriviaRequest(BaseModel):
     subject_id: int
     provider_config: ProviderConfig
-    note_ids: list[int] = []
+    note_ids: list[int] | None = None
 
 
 class TriviaQuestion(BaseModel):

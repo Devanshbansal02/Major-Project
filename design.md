@@ -1,4 +1,4 @@
-# VeerPreps Student Learning Dashboard — Design Document
+# VeerPreps Student Learning Dashboard: Design Document
 
 **Date:** 2026-03-28
 **Status:** Approved for implementation
@@ -36,8 +36,8 @@ A student-facing learning support dashboard that connects to the VeerPreps notes
 
 Two independent deployable units (now containerised via Docker):
 
-- `frontend/` — React + Vite + TypeScript SPA
-- `backend/` — FastAPI Python server
+- `frontend/`: React + Vite + TypeScript SPA
+- `backend/`: FastAPI Python server
 
 They communicate via REST + Server-Sent Events (SSE) for streaming responses. Both can be run natively or via `docker-compose up`.
 
@@ -379,7 +379,7 @@ Actively learning something new, slow down and go chunk by chunk. Build the ment
 - For `explain` mode: shows topic input field if no `?topic` param, then renders chat
 - Chat messages rendered with `react-markdown`
 - Input box at bottom, send on Enter
-- Streams response via SSE — shows typing indicator while streaming
+- Streams response via SSE: shows typing indicator while streaming
 - "Clear chat" button
 
 #### TriviaView (`/subject/:id/trivia`)
@@ -398,7 +398,7 @@ Actively learning something new, slow down and go chunk by chunk. Build the ment
   - API Key field (hidden input, not shown for Ollama)
   - Base URL field (shown only for Custom)
   - Model dropdown: populated by `GET /api/providers/models`; shows "Fetching models..." while loading
-  - "Save & Test" button — fires a simple test completion to validate config
+  - "Save & Test" button: fires a simple test completion to validate config
 - `LearningStyleEditor` component:
   - Large textarea (min 4 rows)
   - "Reset to default" button
@@ -454,7 +454,7 @@ interface TriviaQuestion {
 
 ---
 
-## 6. Data Flow — End to End
+## 6. Data Flow: End to End
 
 ### Notes Ingestion (one-time setup)
 
@@ -511,7 +511,8 @@ User opens Settings, selects provider
 | `pydantic` | Request/response validation |
 
 **System dependencies (handled by Docker):**
-- `tesseract-ocr` — Tesseract OCR binaries
+
+- `tesseract-ocr`: Tesseract OCR binaries
 
 ### Frontend
 
@@ -522,7 +523,7 @@ User opens Settings, selects provider
 | `react-markdown` | Render LLM markdown output |
 | `axios` or native `fetch` | HTTP client (use native fetch) |
 
-No UI component library — build components from scratch with CSS.
+No UI component library: build components from scratch with CSS.
 
 ---
 
@@ -530,17 +531,17 @@ No UI component library — build components from scratch with CSS.
 
 Build in this sequence. Each step is independently shippable.
 
-1. **Backend scaffold** — FastAPI app, config, subject routes returning hardcoded data
-2. **Notes API integration** — fetch + filter notes from VeerPreps API, `/api/notes`
-3. **Frontend scaffold** — Vite + React + router, Dashboard page with hardcoded subjects
-4. **SubjectView** — notes list fetched from backend, PDF links working
-5. **Settings page** — provider config, model listing endpoint + dropdown
-6. **LLM layer** — compatibility layer working for all 4 providers
-7. **Notes processing** — ingestion pipeline, CLI integrations, text output files
-8. **RAG indexing** — notebooklm-py index build wired to ingest endpoint
-9. **Ask Doubt** — RAG query → LLM prompt → SSE streaming → ChatView
-10. **Explain Again** — learning style prompt + RAG context → ChatView (explain mode)
-11. **Trivia** — generation prompt → JSON parse → TriviaView quiz UI
+1. **Backend scaffold**: FastAPI app, config, subject routes returning hardcoded data
+2. **Notes API integration**: fetch + filter notes from VeerPreps API, `/api/notes`
+3. **Frontend scaffold**: Vite + React + router, Dashboard page with hardcoded subjects
+4. **SubjectView**: notes list fetched from backend, PDF links working
+5. **Settings page**: provider config, model listing endpoint + dropdown
+6. **LLM layer**: compatibility layer working for all 4 providers
+7. **Notes processing**: ingestion pipeline, CLI integrations, text output files
+8. **RAG indexing**: notebooklm-py index build wired to ingest endpoint
+9. **Ask Doubt**: RAG query → LLM prompt → SSE streaming → ChatView
+10. **Explain Again**: learning style prompt + RAG context → ChatView (explain mode)
+11. **Trivia**: generation prompt → JSON parse → TriviaView quiz UI
 
 ---
 

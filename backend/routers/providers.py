@@ -1,14 +1,18 @@
 import logging
-from fastapi import APIRouter
-from backend.config import ANTHROPIC_MODELS, OLLAMA_BASE_URL
+
 import httpx
+from fastapi import APIRouter
+
+from backend.config import ANTHROPIC_MODELS, OLLAMA_BASE_URL
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
 @router.get("/providers/models")
-async def get_models(provider: str, api_key: str = "", base_url: str = "", custom_style: str = "openai"):
+async def get_models(
+    provider: str, api_key: str = "", base_url: str = "", custom_style: str = "openai"
+):
     logger.info("Model listing requested: provider=%s", provider)
 
     if provider == "anthropic":
@@ -64,7 +68,7 @@ async def get_models(provider: str, api_key: str = "", base_url: str = "", custo
             return []
 
     if provider == "custom":
-        # Anthropic-style custom endpoint — try dynamic fetch, fall back to hardcoded list
+        # Anthropic-style custom endpoint: try dynamic fetch, fall back to hardcoded list
         if custom_style == "anthropic":
             try:
                 stripped = base_url.rstrip("/")
@@ -85,11 +89,15 @@ async def get_models(provider: str, api_key: str = "", base_url: str = "", custo
                     r.raise_for_status()
                     models = [m["id"] for m in r.json().get("data", [])]
                     if models:
-                        logger.debug("Custom Anthropic-style models fetched: %s", models)
+                        logger.debug(
+                            "Custom Anthropic-style models fetched: %s", models
+                        )
                         return models
             except Exception as e:
                 logger.warning("Failed to fetch custom Anthropic-style models: %s", e)
-            logger.debug("Custom Anthropic-style endpoint: falling back to hardcoded model list")
+            logger.debug(
+                "Custom Anthropic-style endpoint: falling back to hardcoded model list"
+            )
             return ANTHROPIC_MODELS
 
         # OpenAI-style custom endpoint → fetch from /v1/models (or /models if base_url already has v1)

@@ -31,12 +31,15 @@ export default function NoteItem({ note }: Props) {
           padding: 14px 18px;
           background: var(--bg-elevated);
           border: 1px solid var(--border-subtle);
-          border-radius: var(--radius-md);
+          border-radius: var(--r-md);
           gap: 16px;
-          transition: border-color 150ms ease;
+          transition: border-color 200ms var(--ease-out), transform 180ms var(--ease-out);
         }
         .note-item:hover {
-          border-color: var(--border);
+          border-color: var(--border-strong);
+        }
+        .note-item:active {
+          transform: scale(0.98);
         }
         .note-name {
           font-size: 14px;
@@ -57,14 +60,17 @@ export default function NoteItem({ note }: Props) {
           color: var(--text-secondary);
           background: var(--bg-surface);
           border: 1px solid var(--border);
-          border-radius: var(--radius-sm);
+          border-radius: var(--r-sm);
           padding: 6px 12px;
           white-space: nowrap;
-          transition: all 150ms ease;
+          transition: all 150ms var(--ease-out);
         }
         .note-link-btn:hover {
-          color: var(--accent-hover);
-          border-color: var(--accent);
+          color: var(--text-primary);
+          border-color: var(--border-strong);
+        }
+        .note-link-btn:active {
+          transform: scale(0.96);
         }
       `}</style>
     </div>

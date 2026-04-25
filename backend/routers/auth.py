@@ -1,6 +1,6 @@
 import logging
 
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Header, HTTPException
 from pydantic import BaseModel
 
 from backend.db import get_db, hash_password, make_token
@@ -12,6 +12,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # Request schemas
 # ---------------------------------------------------------------------------
+
 
 class LoginRequest(BaseModel):
     username: str
@@ -27,6 +28,7 @@ class RegisterRequest(BaseModel):
 # ---------------------------------------------------------------------------
 # Routes
 # ---------------------------------------------------------------------------
+
 
 @router.post("/auth/register", status_code=201)
 async def register(req: RegisterRequest):
@@ -101,8 +103,9 @@ async def me(authorization: str = Header("")):
 
 
 # ---------------------------------------------------------------------------
-# Dependency — extracts and validates session token
+# Dependency: extracts and validates session token
 # ---------------------------------------------------------------------------
+
 
 async def require_faculty(authorization: str = Header("")) -> int:
     """FastAPI dependency. Returns faculty_id or raises 401."""

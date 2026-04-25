@@ -288,7 +288,7 @@ export default function ChatView() {
           color: var(--text-muted);
           font-family: var(--font-body);
           flex-shrink: 0;
-          transition: color 140ms, border-color 140ms, transform 100ms;
+          transition: color 150ms var(--ease-out), border-color 150ms var(--ease-out), transform 120ms var(--ease-out);
         }
         .chat-clear-btn:not(:disabled):hover { color: var(--danger); border-color: rgba(244,63,94,0.35); }
         .chat-clear-btn:not(:disabled):active { transform: scale(0.96); }
@@ -419,10 +419,10 @@ export default function ChatView() {
           align-items: center;
           justify-content: center;
           flex-shrink: 0;
-          transition: background 140ms, transform 100ms, opacity 140ms;
+          transition: background 150ms var(--ease-out), transform 120ms var(--ease-out), opacity 150ms;
         }
         .chat-send-btn:not(:disabled):hover { background: var(--accent-hover); }
-        .chat-send-btn:not(:disabled):active { transform: scale(0.94); }
+        .chat-send-btn:not(:disabled):active { transform: scale(0.95); }
         .chat-send-btn:disabled { opacity: 0.35; cursor: not-allowed; }
 
         .chat-send-spinner {

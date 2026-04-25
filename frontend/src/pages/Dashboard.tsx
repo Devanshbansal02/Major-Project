@@ -1,21 +1,18 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import SubjectCard from "../components/SubjectCard";
-import { SUBJECTS } from "../constants/subjects";
-import { getNotes } from "../api/client";
+import { getSubjects, type SubjectInfo } from "../api/client";
 import { useSettingsStore } from "../store/settings";
 import type { Subject } from "../types";
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const [subjects, setSubjects] = useState<Subject[]>(
-    SUBJECTS.map((s) => ({ ...s, noteCount: 0 }))
-  );
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [loading, setLoading] = useState(true);
   const [showToast, setShowToast] = useState(false);
 
   const { provider, model, getApiKey } = useSettingsStore();
 
-  // Show toast if provider needs config and hasn't been set up
   useEffect(() => {
     const needsKey = provider !== "ollama";
     const apiKey = getApiKey();
@@ -28,16 +25,12 @@ export default function Dashboard() {
   }, [provider, model, getApiKey]);
 
   useEffect(() => {
-    getNotes()
-      .then((notes) => {
-        setSubjects(
-          SUBJECTS.map((s) => ({
-            ...s,
-            noteCount: notes.filter((n) => n.subjectId === s.id).length,
-          }))
-        );
+    getSubjects()
+      .then((data: SubjectInfo[]) => {
+        setSubjects(data.map(s => ({ id: s.id, name: s.name, code: s.code, color: s.color, noteCount: s.note_count })));
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, []);
 
   return (
@@ -47,13 +40,29 @@ export default function Dashboard() {
           <h1 className="dashboard-title">Bloom</h1>
           <p className="dashboard-subtitle">Your AI-powered revision partner</p>
         </div>
-        <button className="icon-btn" onClick={() => navigate("/settings")} title="Settings">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="12" r="3" />
-            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-          </svg>
-        </button>
+        <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+          <button className="icon-btn" style={{ width: "auto", padding: "0 14px", fontSize: "13px" }} onClick={() => navigate("/faculty/login")}>
+            Faculty Portal
+          </button>
+          <button className="icon-btn" onClick={() => navigate("/settings")} title="Settings">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="3" />
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l-.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+            </svg>
+          </button>
+        </div>
       </div>
+
+      {loading && <p style={{ color: "var(--text-muted)", fontSize: "14px" }}>Loading subjects…</p>}
+      {!loading && subjects.length === 0 && (
+        <p style={{ color: "var(--text-muted)", fontSize: "14px" }}>
+          No subjects yet.{" "}
+          <button style={{ background: "none", border: "none", color: "var(--accent)", cursor: "pointer", textDecoration: "underline", fontSize: "14px" }} onClick={() => navigate("/faculty/login")}>
+            Log in as faculty
+          </button>{" "}
+          to add subjects and upload notes.
+        </p>
+      )}
 
       <div className="subject-grid">
         {subjects.map((subject) => (

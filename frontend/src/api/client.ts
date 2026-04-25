@@ -1,15 +1,57 @@
-import type { Note, ProviderConfig, TriviaQuestion } from "../types";
+import type { ProviderConfig, TriviaQuestion } from "../types";
 
-const BASE_URL = "http://localhost:8000";
+export const BASE_URL = "http://localhost:8000";
 
-export async function getNotes(subjectId?: number): Promise<Note[]> {
-  const url = subjectId
-    ? `${BASE_URL}/api/notes/${subjectId}`
-    : `${BASE_URL}/api/notes`;
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`Failed to fetch notes: ${res.status}`);
-  return res.json();
+// ---------------------------------------------------------------------------
+// Student: subjects + notes
+// ---------------------------------------------------------------------------
+
+export interface SubjectInfo {
+  id: number;
+  name: string;
+  code: string;
+  color: string;
+  faculty_name: string;
+  note_count: number;
 }
+
+export interface NoteInfo {
+  id: number;
+  original_name: string;
+  file_type: string;
+  class_date: string;
+  uploaded_at: string;
+  is_embedded: boolean | number;
+}
+
+export async function getSubjects(): Promise<SubjectInfo[]> {
+  const r = await fetch(`${BASE_URL}/api/notes/subjects`);
+  if (!r.ok) return [];
+  return r.json();
+}
+
+export async function getNotes(subjectId: number): Promise<NoteInfo[]> {
+  const r = await fetch(`${BASE_URL}/api/notes/subjects/${subjectId}`);
+  if (!r.ok) throw new Error(`Failed to fetch notes: ${r.status}`);
+  return r.json();
+}
+
+export async function triggerIngest(
+  noteIds: number[],
+  mode: "all" | "last_class" | "custom" = "custom"
+): Promise<{ status: string; count: number }> {
+  const r = await fetch(`${BASE_URL}/api/notes/ingest`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ note_ids: noteIds, mode }),
+  });
+  if (!r.ok) throw new Error("Ingest failed");
+  return r.json();
+}
+
+// ---------------------------------------------------------------------------
+// Models
+// ---------------------------------------------------------------------------
 
 export async function getModels(
   provider: string,
@@ -20,20 +62,26 @@ export async function getModels(
   const params = new URLSearchParams({ provider, api_key: apiKey });
   if (baseUrl) params.set("base_url", baseUrl);
   if (customStyle) params.set("custom_style", customStyle);
-  const res = await fetch(`${BASE_URL}/api/providers/models?${params}`);
-  if (!res.ok) return [];
-  return res.json();
+  const r = await fetch(`${BASE_URL}/api/providers/models?${params}`);
+  if (!r.ok) return [];
+  return r.json();
 }
+
+// ---------------------------------------------------------------------------
+// Trivia
+// ---------------------------------------------------------------------------
 
 export async function getTriviaQuestions(
   subjectId: number,
-  providerConfig: ProviderConfig
+  providerConfig: ProviderConfig,
+  noteIds: number[] = []
 ): Promise<TriviaQuestion[]> {
-  const res = await fetch(`${BASE_URL}/api/chat/trivia`, {
+  const r = await fetch(`${BASE_URL}/api/chat/trivia`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       subject_id: subjectId,
+      note_ids: noteIds,
       provider_config: {
         provider: providerConfig.provider,
         api_key: providerConfig.apiKey,
@@ -43,30 +91,28 @@ export async function getTriviaQuestions(
       },
     }),
   });
-  if (!res.ok) throw new Error("Failed to generate trivia");
-  const data = await res.json();
+  if (!r.ok) throw new Error("Failed to generate trivia");
+  const data = await r.json();
   return data.questions ?? [];
 }
 
-export async function triggerIngest(): Promise<{ status: string }> {
-  const res = await fetch(`${BASE_URL}/api/notes/ingest`, { method: "POST" });
-  if (!res.ok) throw new Error("Ingest failed");
-  return res.json();
-}
+// ---------------------------------------------------------------------------
+// SSE streaming chat
+// ---------------------------------------------------------------------------
 
 export async function* streamChat(
   endpoint: string,
   body: object
 ): AsyncGenerator<string> {
-  const res = await fetch(`${BASE_URL}${endpoint}`, {
+  const r = await fetch(`${BASE_URL}${endpoint}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
 
-  if (!res.ok || !res.body) throw new Error("Stream request failed");
+  if (!r.ok || !r.body) throw new Error("Stream request failed");
 
-  const reader = res.body.getReader();
+  const reader = r.body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
 

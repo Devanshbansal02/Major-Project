@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import { useParams, useSearchParams, useNavigate } from "react-router-dom";
+import { useParams, useSearchParams, useNavigate, useLocation } from "react-router-dom";
 import ChatMessage from "../components/ChatMessage";
-import { SUBJECTS } from "../constants/subjects";
 import { useSettingsStore } from "../store/settings";
 import { streamChat } from "../api/client";
 import type { ChatMessage as ChatMessageType } from "../types";
@@ -10,12 +9,14 @@ export default function ChatView() {
   const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const subjectId = Number(id);
   const mode = searchParams.get("mode") ?? "doubt";
   const topicParam = searchParams.get("topic") ?? "";
+  const noteIds: number[] = (location.state as { noteIds?: number[] })?.noteIds ?? [];
 
-  const subject = SUBJECTS.find((s) => s.id === subjectId);
+  const [subjectName, setSubjectName] = useState("");
   const { provider, baseUrl, model, learningStyle, customStyle, getApiKey } = useSettingsStore();
 
   const [messages, setMessages] = useState<ChatMessageType[]>([]);
@@ -25,6 +26,16 @@ export default function ChatView() {
   const [streaming, setStreaming] = useState(false);
   const [streamingContent, setStreamingContent] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    fetch(`http://localhost:8000/api/notes/subjects`)
+      .then(r => r.json())
+      .then((subjects: { id: number; name: string }[]) => {
+        const s = subjects.find(x => x.id === subjectId);
+        if (s) setSubjectName(s.name);
+      })
+      .catch(() => {});
+  }, [subjectId]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -47,10 +58,10 @@ export default function ChatView() {
 
       if (mode === "doubt") {
         endpoint = "/api/chat/doubt";
-        body = { subject_id: subjectId, question: text, provider_config: providerConfig };
+        body = { subject_id: subjectId, question: text, note_ids: noteIds, provider_config: providerConfig };
       } else {
         endpoint = "/api/chat/explain";
-        body = { subject_id: subjectId, topic: topic || text, learning_style: learningStyle, provider_config: providerConfig };
+        body = { subject_id: subjectId, topic: topic || text, learning_style: learningStyle, note_ids: noteIds, provider_config: providerConfig };
       }
 
       let full = "";
@@ -77,7 +88,7 @@ export default function ChatView() {
         <button className="back-btn" onClick={() => navigate(`/subject/${subjectId}`)}>← Back</button>
         <div>
           <div className="chat-mode-label" style={{ color: modeColor }}>{modeLabel}</div>
-          <div className="chat-subject-name">{subject?.name}</div>
+          <div className="chat-subject-name">{subjectName || `Subject ${subjectId}`}</div>
         </div>
         <button className="btn btn-ghost clear-btn" onClick={() => setMessages([])}>Clear</button>
       </div>

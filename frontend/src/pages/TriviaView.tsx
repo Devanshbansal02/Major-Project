@@ -1,7 +1,6 @@
-import { useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import TriviaQuestion from "../components/TriviaQuestion";
-import { SUBJECTS } from "../constants/subjects";
 import { useSettingsStore } from "../store/settings";
 import { getTriviaQuestions } from "../api/client";
 import type { TriviaQuestion as TriviaQuestionType } from "../types";
@@ -9,15 +8,26 @@ import type { TriviaQuestion as TriviaQuestionType } from "../types";
 export default function TriviaView() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const subjectId = Number(id);
-  const subject = SUBJECTS.find((s) => s.id === subjectId);
+  const noteIds: number[] = (location.state as { noteIds?: number[] })?.noteIds ?? [];
 
+  const [subjectName, setSubjectName] = useState("");
   const { provider, baseUrl, model, customStyle, getApiKey } = useSettingsStore();
   const [questions, setQuestions] = useState<TriviaQuestionType[]>([]);
   const [current, setCurrent] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  useEffect(() => {
+    fetch("http://localhost:8000/api/notes/subjects")
+      .then(r => r.json())
+      .then((subjects: { id: number; name: string }[]) => {
+        const s = subjects.find(x => x.id === subjectId);
+        if (s) setSubjectName(s.name);
+      })
+      .catch(() => {});
+  }, [subjectId]);
   async function generate() {
     setLoading(true);
     setError("");
@@ -25,7 +35,7 @@ export default function TriviaView() {
     setQuestions([]);
     try {
       const providerConfig = { provider, apiKey: getApiKey(), baseUrl, model, customStyle };
-      const qs = await getTriviaQuestions(subjectId, providerConfig);
+      const qs = await getTriviaQuestions(subjectId, providerConfig, noteIds);
       if (qs.length === 0) throw new Error("No questions returned");
       setQuestions(qs);
     } catch (e: unknown) {
@@ -46,7 +56,7 @@ export default function TriviaView() {
         <button className="back-btn" onClick={() => navigate(`/subject/${subjectId}`)}>← Back</button>
         <div>
           <div className="trivia-mode-label">Trivia Quiz</div>
-          <h1 className="trivia-subject-name">{subject?.name}</h1>
+          <h1 className="trivia-subject-name">{subjectName || `Subject ${subjectId}`}</h1>
         </div>
       </div>
 

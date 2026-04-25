@@ -8,7 +8,7 @@ export default function Settings() {
   return (
     <div className="page">
       <div className="page-header">
-        <button className="back-btn" onClick={() => navigate("/")}>← Back</button>
+        <button className="back-btn" onClick={() => navigate("/student")}>← Back</button>
         <h1 className="settings-title">Settings</h1>
       </div>
 

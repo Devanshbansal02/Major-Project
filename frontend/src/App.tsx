@@ -1,4 +1,5 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import Home from "./pages/Home";
 import Dashboard from "./pages/Dashboard";
 import SubjectView from "./pages/SubjectView";
 import ChatView from "./pages/ChatView";
@@ -13,8 +14,11 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route path="/" element={<Navigate to="/student" replace />} />
+        <Route path="/home" element={<Home />} />
+
         {/* Student routes */}
-        <Route path="/" element={<Dashboard />} />
+        <Route path="/student" element={<Dashboard />} />
         <Route path="/subject/:id" element={<SubjectView />} />
         <Route path="/subject/:id/chat" element={<ChatView />} />
         <Route path="/subject/:id/trivia" element={<TriviaView />} />

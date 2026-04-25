@@ -41,8 +41,8 @@ export default function Dashboard() {
           <p className="dashboard-subtitle">Your AI-powered revision partner</p>
         </div>
         <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-          <button className="icon-btn" style={{ width: "auto", padding: "0 14px", fontSize: "13px" }} onClick={() => navigate("/faculty/login")}>
-            Faculty Portal
+          <button className="icon-btn" style={{ width: "auto", padding: "0 14px", fontSize: "13px" }} onClick={() => navigate("/home")}>
+            Switch Role
           </button>
           <button className="icon-btn" onClick={() => navigate("/settings")} title="Settings">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -56,11 +56,7 @@ export default function Dashboard() {
       {loading && <p style={{ color: "var(--text-muted)", fontSize: "14px" }}>Loading subjects…</p>}
       {!loading && subjects.length === 0 && (
         <p style={{ color: "var(--text-muted)", fontSize: "14px" }}>
-          No subjects yet.{" "}
-          <button style={{ background: "none", border: "none", color: "var(--accent)", cursor: "pointer", textDecoration: "underline", fontSize: "14px" }} onClick={() => navigate("/faculty/login")}>
-            Log in as faculty
-          </button>{" "}
-          to add subjects and upload notes.
+          No subjects yet. Wait for your faculty to add subjects and upload notes.
         </p>
       )}
 

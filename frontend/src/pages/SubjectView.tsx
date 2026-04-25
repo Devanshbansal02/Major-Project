@@ -29,8 +29,21 @@ export default function SubjectView() {
   const [loading, setLoading] = useState(true);
 
   // Selection state
-  const [selectionMode, setSelectionMode] = useState<"all" | "last_class" | "custom">("last_class");
-  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [selectionMode, setSelectionMode] = useState<"all" | "last_class" | "custom">(() => {
+    return (sessionStorage.getItem(`sv_mode_${id}`) as any) || "last_class";
+  });
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(() => {
+    const saved = sessionStorage.getItem(`sv_selected_${id}`);
+    return saved ? new Set(JSON.parse(saved)) : new Set();
+  });
+
+  useEffect(() => {
+    sessionStorage.setItem(`sv_mode_${id}`, selectionMode);
+  }, [id, selectionMode]);
+
+  useEffect(() => {
+    sessionStorage.setItem(`sv_selected_${id}`, JSON.stringify(Array.from(selectedIds)));
+  }, [id, selectedIds]);
 
   // Embed state
   const [embedding, setEmbedding] = useState(false);
@@ -84,15 +97,35 @@ export default function SubjectView() {
     setEmbedMsg("");
     try {
       const r = await triggerIngest(ids, selectionMode);
-      setEmbedMsg(`Embedding started for ${r.count} note${r.count !== 1 ? "s" : ""}…`);
-      // poll briefly then refresh
-      setTimeout(async () => {
-        await fetchData();
-        setEmbedMsg("");
-      }, 3000);
+      setEmbedMsg(`Embedding ${r.count} note${r.count !== 1 ? "s" : ""}…`);
+
+      // Poll every 3 s until all selected notes are embedded or 60 s elapses.
+      const deadline = Date.now() + 60_000;
+      const poll = async () => {
+        const fresh = await getNotes(subjectId);
+        setNotes(fresh);
+        applyMode(selectionMode, fresh);
+
+        const allDone = ids.every(id => {
+          const n = fresh.find(x => x.id === id);
+          return n && (n.is_embedded === true || n.is_embedded === 1);
+        });
+
+        if (allDone) {
+          setEmbedMsg("✓ Embedding complete");
+          setTimeout(() => setEmbedMsg(""), 2000);
+          setEmbedding(false);
+        } else if (Date.now() < deadline) {
+          setTimeout(poll, 3000);
+        } else {
+          setEmbedMsg("Embedding is taking longer than expected — check backend logs.");
+          setEmbedding(false);
+        }
+      };
+
+      setTimeout(poll, 3000);
     } catch {
       setEmbedMsg("Embedding failed. Check backend logs.");
-    } finally {
       setEmbedding(false);
     }
   }
@@ -109,7 +142,7 @@ export default function SubjectView() {
   return (
     <div className="page">
       <div className="page-header">
-        <button className="back-btn" onClick={() => navigate("/")}>← Back</button>
+        <button className="back-btn" onClick={() => navigate("/student")}>← Back</button>
         {subject && (
           <div className="sv-subject-badge" style={{
             background: `color-mix(in srgb, ${subject.color} 12%, transparent)`,

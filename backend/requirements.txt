@@ -9,3 +9,6 @@ sse-starlette
 pymupdf
 pytesseract
 chromadb
+aiosqlite
+python-docx
+python-multipart

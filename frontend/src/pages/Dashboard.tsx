@@ -100,13 +100,13 @@ export default function Dashboard() {
       )}
 
       {/* Toast */}
-      <div className={`dash-toast ${showToast ? "visible" : ""}`} role="status">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <div className={`toast toast-warning ${showToast ? "toast-visible" : ""}`} role="status">
+        <svg className="toast-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
           <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
         </svg>
         <span>LLM provider not configured.</span>
         <button
-          className="dash-toast-link"
+          className="toast-action"
           onClick={() => { setShowToast(false); navigate("/settings"); }}
         >
           Open Settings
@@ -241,45 +241,7 @@ export default function Dashboard() {
           margin-top: 8px;
         }
 
-        /* Toast */
-        .dash-toast {
-          position: fixed;
-          bottom: 28px;
-          left: 50%;
-          transform: translateX(-50%) translateY(calc(100% + 28px));
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          padding: 11px 18px;
-          background: var(--bg-elevated);
-          border: 1px solid var(--border);
-          border-radius: var(--r-md);
-          font-size: 13px;
-          color: var(--text-secondary);
-          white-space: nowrap;
-          pointer-events: none;
-          opacity: 0;
-          transition: transform 320ms var(--ease-out), opacity 320ms;
-          z-index: 200;
-        }
-
-        .dash-toast.visible {
-          transform: translateX(-50%) translateY(0);
-          opacity: 1;
-          pointer-events: auto;
-        }
-
-        .dash-toast svg { color: var(--warning); flex-shrink: 0; }
-
-        .dash-toast-link {
-          font-size: 13px;
-          font-weight: 600;
-          color: var(--accent-hover);
-          font-family: var(--font-body);
-          text-decoration: underline;
-          text-underline-offset: 2px;
-          padding: 0;
-        }
+        /* Toast handled by global .toast system in index.css */
       `}</style>
     </div>
   );

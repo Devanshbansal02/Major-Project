@@ -67,11 +67,11 @@ export default function TriviaView() {
       {questions.length === 0 && !loading && (
         <div className="trivia-start" style={{ animationDelay: "60ms" }}>
           {error && (
-            <div className="trivia-error-box">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <div className="alert alert-danger">
+              <svg className="alert-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
               </svg>
-              {error}
+              <span>{error}</span>
             </div>
           )}
           <p className="trivia-desc">
@@ -136,18 +136,6 @@ export default function TriviaView() {
           gap: 18px;
           max-width: 440px;
           animation: fadeUp 240ms var(--ease-out) both;
-        }
-
-        .trivia-error-box {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          padding: 10px 14px;
-          background: color-mix(in srgb, var(--danger) 8%, transparent);
-          border: 1px solid color-mix(in srgb, var(--danger) 22%, transparent);
-          border-radius: var(--r-sm);
-          font-size: 13px;
-          color: var(--danger);
         }
 
         .trivia-desc {

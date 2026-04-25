@@ -230,7 +230,9 @@ export default function SubjectView() {
           <div className="sv-embed-text">
             <span>{selectedIds.size} selected · {embeddedSelected} indexed</span>
             {embedMsg && (
-              <span className={`sv-embed-msg ${embedSuccess ? "success" : ""}`}>{embedMsg}</span>
+              <span className={`sv-embed-msg ${embedSuccess ? "success" : "error"}`}>
+                {embedSuccess ? "✓ " : ""}{embedMsg}
+              </span>
             )}
           </div>
           <button
@@ -360,9 +362,9 @@ export default function SubjectView() {
           padding: 10px 14px;
           margin-bottom: 20px;
         }
-        .sv-embed-text { display: flex; flex-direction: column; gap: 2px; font-size: 12px; color: var(--text-muted); }
-        .sv-embed-msg { font-size: 12px; color: var(--text-muted); }
+        .sv-embed-msg { font-size: 12px; color: var(--text-muted); font-family: var(--font-mono); }
         .sv-embed-msg.success { color: var(--success); }
+        .sv-embed-msg.error   { color: var(--danger); }
         .sv-embed-btn {
           display: flex; align-items: center; gap: 7px;
           padding: 7px 16px;

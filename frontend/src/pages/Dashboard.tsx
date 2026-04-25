@@ -72,7 +72,7 @@ export default function Dashboard() {
       <div className="dash-eyebrow">
         <span className="section-label">Your subjects</span>
         {!loading && subjects.length > 0 && (
-          <span className="dash-count">{subjects.length} enrolled</span>
+          <span className="dash-count">{subjects.length} {subjects.length === 1 ? "subject" : "subjects"} enrolled</span>
         )}
       </div>
 

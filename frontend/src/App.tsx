@@ -9,11 +9,14 @@ import FacultyLogin from "./pages/FacultyLogin";
 import FacultyDashboard from "./pages/FacultyDashboard";
 import FacultySubjectNotes from "./pages/FacultySubjectNotes";
 import FacultyGuard from "./components/FacultyGuard";
+import FullscreenPrompt from "./components/FullscreenPrompt";
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <Routes>
+    <>
+      <FullscreenPrompt />
+      <BrowserRouter>
+        <Routes>
         <Route path="/" element={<Navigate to="/home" replace />} />
         <Route path="/home" element={<Home />} />
 
@@ -30,5 +33,6 @@ export default function App() {
         <Route path="/faculty/subjects/:id" element={<FacultyGuard><FacultySubjectNotes /></FacultyGuard>} />
       </Routes>
     </BrowserRouter>
+    </>
   );
 }

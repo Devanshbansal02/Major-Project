@@ -8,27 +8,7 @@ Write-Host "  Bloom Dev Launcher (Dockerized)" -ForegroundColor Cyan
 Write-Host "  ===============================" -ForegroundColor Cyan
 Write-Host ""
 
-# Install uv if not available
-if (-not (Get-Command uv -ErrorAction SilentlyContinue)) {
-    Write-Host "  uv not found. Installing uv..." -ForegroundColor Yellow
-    powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
-    $env:Path += ";$HOME\.local\bin;$HOME\.cargo\bin"
-}
 
-Write-Host "  Downloading backend dependencies using uv..." -ForegroundColor Yellow
-Set-Location -Path "$Root\backend"
-if (-not (Test-Path ".venv")) {
-    uv venv
-}
-uv sync
-
-Write-Host "  Downloading frontend dependencies using npm..." -ForegroundColor Yellow
-Set-Location -Path "$Root\frontend"
-if (Get-Command npm -ErrorAction SilentlyContinue) {
-    npm install
-} else {
-    Write-Host "  npm not found. Skipping frontend dependency installation." -ForegroundColor Red
-}
 
 Write-Host "  Checking initial config..." -ForegroundColor Yellow
 Set-Location -Path $Root
@@ -46,6 +26,9 @@ Write-Host ""
 Write-Host "  Stack started in background." -ForegroundColor Green
 Write-Host "  Backend : http://localhost:8000" -ForegroundColor Green
 Write-Host "  Frontend: http://localhost:3000" -ForegroundColor Green
+Write-Host ""
+
+
 Write-Host ""
 Write-Host "  To view logs, run: docker-compose logs -f" -ForegroundColor DarkGray
 Write-Host "  To stop servers, run: docker-compose down" -ForegroundColor DarkGray

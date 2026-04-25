@@ -1,0 +1,15 @@
+{
+  "name": "Bloom Learning Dashboard",
+  "short_name": "Bloom",
+  "start_url": "/",
+  "display": "fullscreen",
+  "background_color": "#111115",
+  "theme_color": "#111115",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "512x512"
+    }
+  ]
+}

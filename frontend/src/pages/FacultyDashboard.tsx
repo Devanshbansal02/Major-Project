@@ -67,12 +67,17 @@ export default function FacultyDashboard() {
   }
 
   async function handleLogout() {
-    await fetch(`${BASE_URL}/api/auth/logout`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token!}` },
-    });
-    logout();
-    navigate("/faculty/login");
+    try {
+      await fetch(`${BASE_URL}/api/auth/logout`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token!}` },
+      });
+    } catch (err) {
+      console.error("Logout fetch failed:", err);
+    } finally {
+      logout();
+      navigate("/faculty/login");
+    }
   }
 
   return (

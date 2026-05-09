@@ -17,3 +17,6 @@ ANTHROPIC_MODELS = [
     "claude-3-5-haiku-20241022",
     "claude-3-opus-20240229",
 ]
+
+# Security
+FACULTY_REGISTRATION_CODE = os.getenv("FACULTY_REGISTRATION_CODE", "BLOOM-2026")

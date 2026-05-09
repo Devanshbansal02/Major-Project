@@ -12,6 +12,7 @@ export default function FacultyLogin() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
+  const [secretCode, setSecretCode] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -25,7 +26,7 @@ export default function FacultyLogin() {
         const r = await fetch(`${BASE_URL}/api/auth/register`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ username, password, name }),
+          body: JSON.stringify({ username, password, name, secret_code: secretCode }),
         });
         if (!r.ok) {
           const d = await r.json();
@@ -67,8 +68,9 @@ export default function FacultyLogin() {
 
         <form onSubmit={handleSubmit} className="fl-form">
           {mode === "register" && (
-            <div className="fl-field">
-              <label className="fl-label">Full Name</label>
+            <>
+              <div className="fl-field">
+                <label className="fl-label">Full Name</label>
               <input
                 className="fl-input"
                 value={name}
@@ -77,7 +79,18 @@ export default function FacultyLogin() {
                 required
               />
             </div>
-          )}
+            <div className="fl-field">
+              <label className="fl-label">Faculty Registration Code</label>
+              <input
+                className="fl-input"
+                value={secretCode}
+                onChange={(e) => setSecretCode(e.target.value)}
+                placeholder="Enter secret code"
+                required
+              />
+            </div>
+          </>
+        )}
           <div className="fl-field">
             <label className="fl-label">Username</label>
             <input

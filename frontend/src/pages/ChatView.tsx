@@ -35,7 +35,7 @@ export default function ChatView() {
         const s = subjects.find(x => x.id === subjectId);
         if (s) setSubjectName(s.name);
       })
-      .catch(() => {});
+      .catch(() => { });
   }, [subjectId]);
 
   useEffect(() => {
@@ -72,20 +72,20 @@ export default function ChatView() {
 
       if (mode === "doubt") {
         endpoint = "/api/chat/doubt";
-        body = { 
-          subject_id: subjectId, 
-          question: text, 
-          note_ids: noteIds, 
+        body = {
+          subject_id: subjectId,
+          question: text,
+          note_ids: noteIds,
           provider_config: providerConfig,
-          history: messages 
+          history: messages
         };
       } else {
         endpoint = "/api/chat/explain";
-        body = { 
-          subject_id: subjectId, 
-          topic: text, 
-          learning_style: learningStyle, 
-          note_ids: noteIds, 
+        body = {
+          subject_id: subjectId,
+          topic: text,
+          learning_style: learningStyle,
+          note_ids: noteIds,
           provider_config: providerConfig,
           history: messages
         };
@@ -140,7 +140,7 @@ export default function ChatView() {
             title="Save conversation"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
             </svg>
             Save
           </button>
@@ -151,7 +151,7 @@ export default function ChatView() {
             title="Clear conversation"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+              <polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" /><path d="M10 11v6" /><path d="M14 11v6" /><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
             </svg>
             Clear
           </button>
@@ -206,11 +206,11 @@ export default function ChatView() {
                 <div className="chat-empty-icon">
                   {mode === "doubt" ? (
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                      <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                      <circle cx="12" cy="12" r="10" /><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" /><line x1="12" y1="17" x2="12.01" y2="17" />
                     </svg>
                   ) : (
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+                      <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" /><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
                     </svg>
                   )}
                 </div>
@@ -255,7 +255,7 @@ export default function ChatView() {
                 <span className="chat-send-spinner" />
               ) : (
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                  <line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" />
                 </svg>
               )}
             </button>

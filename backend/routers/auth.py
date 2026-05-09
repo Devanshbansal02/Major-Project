@@ -4,6 +4,7 @@ from fastapi import APIRouter, Header, HTTPException
 from pydantic import BaseModel
 
 from backend.db import get_db, hash_password, make_token
+from backend.config import FACULTY_REGISTRATION_CODE
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -23,6 +24,7 @@ class RegisterRequest(BaseModel):
     username: str
     password: str
     name: str
+    secret_code: str
 
 
 # ---------------------------------------------------------------------------
@@ -32,6 +34,9 @@ class RegisterRequest(BaseModel):
 
 @router.post("/auth/register", status_code=201)
 async def register(req: RegisterRequest):
+    if req.secret_code != FACULTY_REGISTRATION_CODE:
+        raise HTTPException(status_code=403, detail="Invalid faculty registration code")
+
     db = await get_db()
     try:
         await db.execute(

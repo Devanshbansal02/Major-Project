@@ -4,13 +4,23 @@ import re
 from pathlib import Path
 
 import fitz  # PyMuPDF
-import pytesseract
+import easyocr
+import numpy as np
 from PIL import Image, ImageEnhance
 from pptx import Presentation
 
 from backend.config import PROCESSED_DIR, RAW_DIR
 
 logger = logging.getLogger(__name__)
+_ocr_reader = None
+
+
+def get_ocr_reader():
+    global _ocr_reader
+    if _ocr_reader is None:
+        logger.info("Initializing EasyOCR reader...")
+        _ocr_reader = easyocr.Reader(["en"])
+    return _ocr_reader
 
 
 # ---------------------------------------------------------------------------
@@ -81,7 +91,11 @@ def _pdf_handwritten_to_text(path: Path) -> str:
         pix = page.get_pixmap(dpi=300)
         img = Image.open(io.BytesIO(pix.tobytes("png")))
         img = _preprocess_image(img)
-        parts.append(pytesseract.image_to_string(img))
+        # Convert PIL to numpy for EasyOCR
+        img_np = np.array(img)
+        reader = get_ocr_reader()
+        results = reader.readtext(img_np, detail=0)
+        parts.append(" ".join(results))
     doc.close()
     return "\n".join(parts)
 
@@ -107,7 +121,10 @@ def _docx_to_text(path: Path) -> str:
 def _image_to_text(path: Path) -> str:
     img = Image.open(str(path))
     img = _preprocess_image(img)
-    return pytesseract.image_to_string(img)
+    img_np = np.array(img)
+    reader = get_ocr_reader()
+    results = reader.readtext(img_np, detail=0)
+    return " ".join(results)
 
 
 # ---------------------------------------------------------------------------

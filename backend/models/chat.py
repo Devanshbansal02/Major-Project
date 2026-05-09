@@ -10,11 +10,17 @@ class ProviderConfig(BaseModel):
     custom_style: Literal["openai", "anthropic"] = "openai"
 
 
+class Message(BaseModel):
+    role: str
+    content: str
+
+
 class DoubtRequest(BaseModel):
     subject_id: int
     question: str
     provider_config: ProviderConfig
     note_ids: list[int] | None = None   # None = whole subject index, [] = no notes
+    history: list[Message] | None = None
 
 
 class ExplainRequest(BaseModel):
@@ -23,6 +29,7 @@ class ExplainRequest(BaseModel):
     learning_style: str
     provider_config: ProviderConfig
     note_ids: list[int] | None = None
+    history: list[Message] | None = None
 
 
 class TriviaRequest(BaseModel):

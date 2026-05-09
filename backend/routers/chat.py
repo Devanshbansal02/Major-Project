@@ -19,15 +19,20 @@ Context from notes:
 Student question: {question}"""
 
 EXPLAIN_PROMPT = """\
-You are a teaching assistant. Re-explain the following topic to a student.
+You are a friendly and expert teaching assistant. Your goal is to help the student understand the topic: {topic}.
 
 Learning style instructions:
 {learning_style}
 
-Topic: {topic}
-
 Relevant notes context:
-{context}"""
+{context}
+
+Guidelines:
+1. If this is the start of the conversation, provide a clear and engaging explanation based on the context and learning style.
+2. If there is a conversation history, treat the current topic as a follow-up question or response. Do NOT re-explain everything from scratch unless asked.
+3. Be conversational. If the student answers a question you asked, acknowledge it and build upon it.
+4. Use the provided context to ensure accuracy.
+"""
 
 TRIVIA_PROMPT = """\
 Based on the following notes, generate 5 multiple choice questions to test understanding.
@@ -50,10 +55,15 @@ async def chat_doubt(req: DoubtRequest):
     logger.debug("RAG returned %d chunks for doubt query", len(chunks))
     context = _chunks_to_context(chunks)
     prompt = DOUBT_PROMPT.format(context=context, question=req.question)
-    messages = [
-        {"role": "system", "content": "You are a helpful teaching assistant."},
-        {"role": "user", "content": prompt},
-    ]
+    
+    messages = []
+    if req.history:
+        for m in req.history:
+            messages.append({"role": m.role, "content": m.content})
+    else:
+        messages.append({"role": "system", "content": "You are a helpful teaching assistant."})
+    
+    messages.append({"role": "user", "content": prompt})
 
     async def event_generator():
         try:
@@ -79,10 +89,19 @@ async def chat_explain(req: ExplainRequest):
         topic=req.topic,
         context=context,
     )
-    messages = [
-        {"role": "system", "content": "You are a teaching assistant helping a student understand concepts."},
-        {"role": "user", "content": prompt},
-    ]
+    
+    messages = []
+    if req.history and len(req.history) > 0:
+        # If there's history, we keep the system prompt and then the history, then the new prompt
+        messages.append({"role": "system", "content": "You are a teaching assistant helping a student understand concepts. Be conversational and build on previous turns."})
+        for m in req.history:
+            messages.append({"role": m.role, "content": m.content})
+        # Add the new follow-up as a user message
+        messages.append({"role": "user", "content": f"Follow-up/Answer: {req.topic}\n\n(Use the previously provided context and learning style to respond)"})
+    else:
+        # First turn
+        messages.append({"role": "system", "content": "You are a teaching assistant helping a student understand concepts."})
+        messages.append({"role": "user", "content": prompt})
 
     async def event_generator():
         try:

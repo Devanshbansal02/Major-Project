@@ -1,9 +1,9 @@
 FROM ghcr.io/astral-sh/uv:python3.11-bookworm-slim
 
-# System deps for Tesseract OCR
+# System deps for OCR (EasyOCR needs libgl1)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    tesseract-ocr \
-    tesseract-ocr-eng \
+    libgl1 \
+    libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app/backend

@@ -7,7 +7,7 @@ python-pptx
 pydantic
 sse-starlette
 pymupdf
-pytesseract
+easyocr
 chromadb
 aiosqlite
 python-docx

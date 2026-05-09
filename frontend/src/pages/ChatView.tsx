@@ -72,10 +72,23 @@ export default function ChatView() {
 
       if (mode === "doubt") {
         endpoint = "/api/chat/doubt";
-        body = { subject_id: subjectId, question: text, note_ids: noteIds, provider_config: providerConfig };
+        body = { 
+          subject_id: subjectId, 
+          question: text, 
+          note_ids: noteIds, 
+          provider_config: providerConfig,
+          history: messages 
+        };
       } else {
         endpoint = "/api/chat/explain";
-        body = { subject_id: subjectId, topic: text, learning_style: learningStyle, note_ids: noteIds, provider_config: providerConfig };
+        body = { 
+          subject_id: subjectId, 
+          topic: text, 
+          learning_style: learningStyle, 
+          note_ids: noteIds, 
+          provider_config: providerConfig,
+          history: messages
+        };
       }
 
       let full = "";

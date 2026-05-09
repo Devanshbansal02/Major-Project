@@ -87,20 +87,15 @@ def _preprocess_image(img: Image.Image) -> Image.Image:
 def _pdf_handwritten_to_text(path: Path) -> str:
     doc = fitz.open(str(path))
     parts = []
-    total_pages = len(doc)
-    reader = get_ocr_reader()
-
-    for i, page in enumerate(doc):
-        logger.info("OCR Processing page %d/%d for %s", i + 1, total_pages, path.name)
-        # Reduced DPI from 300 to 150 for significant speedup
-        pix = page.get_pixmap(dpi=150)
+    for page in doc:
+        pix = page.get_pixmap(dpi=300)
         img = Image.open(io.BytesIO(pix.tobytes("png")))
         img = _preprocess_image(img)
         # Convert PIL to numpy for EasyOCR
         img_np = np.array(img)
+        reader = get_ocr_reader()
         results = reader.readtext(img_np, detail=0)
         parts.append(" ".join(results))
-
     doc.close()
     return "\n".join(parts)
 

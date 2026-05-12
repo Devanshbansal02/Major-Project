@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Literal, Union
 from pydantic import BaseModel
 
 
@@ -36,6 +36,8 @@ class TriviaRequest(BaseModel):
     subject_id: int
     provider_config: ProviderConfig
     note_ids: list[int] | None = None
+    quiz_type: Literal["mcq", "short_answer"] = "mcq"
+    num_questions: int = 5
 
 
 class TriviaQuestion(BaseModel):
@@ -45,5 +47,15 @@ class TriviaQuestion(BaseModel):
     explanation: str
 
 
+class ShortAnswerQuestion(BaseModel):
+    question: str
+    answer: str
+    explanation: str
+
+
 class TriviaResponse(BaseModel):
     questions: list[TriviaQuestion]
+
+
+class ShortAnswerResponse(BaseModel):
+    questions: list[ShortAnswerQuestion]

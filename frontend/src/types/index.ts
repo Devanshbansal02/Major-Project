@@ -28,6 +28,14 @@ export interface TriviaQuestion {
   explanation: string;
 }
 
+export interface ShortAnswerQuestion {
+  question: string;
+  answer: string;
+  explanation: string;
+}
+
+export type QuizType = "mcq" | "short_answer";
+
 export interface ChatMessage {
   role: "user" | "assistant";
   content: string;

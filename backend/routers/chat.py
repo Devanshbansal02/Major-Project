@@ -3,7 +3,7 @@ import logging
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 from sse_starlette.sse import EventSourceResponse
-from backend.models.chat import DoubtRequest, ExplainRequest, TriviaRequest, TriviaResponse, TriviaQuestion
+from backend.models.chat import DoubtRequest, ExplainRequest, TriviaRequest, TriviaResponse, TriviaQuestion, ShortAnswerResponse, ShortAnswerQuestion
 from backend.services import rag_service, llm_service
 
 router = APIRouter()
@@ -34,9 +34,16 @@ Guidelines:
 4. Use the provided context to ensure accuracy.
 """
 
-TRIVIA_PROMPT = """\
-Based on the following notes, generate 5 multiple choice questions to test understanding.
+TRIVIA_MCQ_PROMPT = """\
+Based on the following notes, generate {num_questions} multiple choice questions to test understanding.
 Return ONLY a JSON array with objects having keys: question, options (array of 4 strings), answer (one of the options), explanation.
+
+Notes context:
+{context}"""
+
+TRIVIA_SHORT_PROMPT = """\
+Based on the following notes, generate {num_questions} short-answer questions to test understanding.
+Return ONLY a JSON array with objects having keys: question, answer (a concise 1-2 sentence answer), explanation (a fuller explanation).
 
 Notes context:
 {context}"""
@@ -118,11 +125,20 @@ async def chat_explain(req: ExplainRequest):
 
 @router.post("/chat/trivia")
 async def chat_trivia(req: TriviaRequest):
-    logger.info("Trivia request: subject_id=%d provider=%s model=%s", req.subject_id, req.provider_config.provider, req.provider_config.model)
+    logger.info(
+        "Trivia request: subject_id=%d type=%s num=%d provider=%s model=%s",
+        req.subject_id, req.quiz_type, req.num_questions,
+        req.provider_config.provider, req.provider_config.model
+    )
     chunks = await rag_service.query(req.subject_id, "general overview concepts", note_ids=req.note_ids)
     logger.debug("RAG returned %d chunks for trivia", len(chunks))
     context = _chunks_to_context(chunks)
-    prompt = TRIVIA_PROMPT.format(context=context)
+
+    if req.quiz_type == "short_answer":
+        prompt = TRIVIA_SHORT_PROMPT.format(num_questions=req.num_questions, context=context)
+    else:
+        prompt = TRIVIA_MCQ_PROMPT.format(num_questions=req.num_questions, context=context)
+
     messages = [
         {"role": "system", "content": "You are a quiz generator. Return only valid JSON."},
         {"role": "user", "content": prompt},
@@ -147,10 +163,14 @@ async def chat_trivia(req: TriviaRequest):
 
     try:
         raw_questions = json.loads(stripped)
-        questions = [TriviaQuestion(**q) for q in raw_questions]
-        logger.info("Trivia: parsed %d questions", len(questions))
+        if req.quiz_type == "short_answer":
+            questions = [ShortAnswerQuestion(**q) for q in raw_questions]
+            logger.info("Short-answer trivia: parsed %d questions", len(questions))
+            return ShortAnswerResponse(questions=questions)
+        else:
+            questions = [TriviaQuestion(**q) for q in raw_questions]
+            logger.info("MCQ trivia: parsed %d questions", len(questions))
+            return TriviaResponse(questions=questions)
     except Exception as e:
         logger.error("Failed to parse trivia JSON: %s\nRaw: %s", e, full, exc_info=True)
         return JSONResponse({"questions": [], "error": "Failed to parse trivia JSON"}, status_code=500)
-
-    return TriviaResponse(questions=questions)

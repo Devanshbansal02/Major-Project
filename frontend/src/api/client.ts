@@ -1,4 +1,4 @@
-import type { ProviderConfig, TriviaQuestion } from "../types";
+import type { ProviderConfig, TriviaQuestion, ShortAnswerQuestion, QuizType } from "../types";
 
 export const BASE_URL = "http://localhost:8000";
 
@@ -74,14 +74,18 @@ export async function getModels(
 export async function getTriviaQuestions(
   subjectId: number,
   providerConfig: ProviderConfig,
-  noteIds: number[] = []
-): Promise<TriviaQuestion[]> {
+  noteIds: number[] = [],
+  quizType: QuizType = "mcq",
+  numQuestions: number = 5
+): Promise<TriviaQuestion[] | ShortAnswerQuestion[]> {
   const r = await fetch(`${BASE_URL}/api/chat/trivia`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       subject_id: subjectId,
       note_ids: noteIds,
+      quiz_type: quizType,
+      num_questions: numQuestions,
       provider_config: {
         provider: providerConfig.provider,
         api_key: providerConfig.apiKey,
